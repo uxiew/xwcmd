@@ -14,85 +14,111 @@ using it:
 
 ```ts
 #!/usr/bin/env node
-import { define } from 'xwcli';
+import { define, colors } from 'xwcli';
 
-const cmd = await define({
-  name: 'mycmd',
-  version: '1.0.0',
+const cmd = define({
+  name: 'mycli',
+  version: '1.1.22-canary.96+df33f2b2a',
   args: [
-    ['-t,--target', 'Bundle target, "es20XX" or "esnext"']
+    [
+      colors.red('t') + ',target <啊啊啊, 啊啊>',
+      `you kan see it ${colors.blue('is')} a description`,
+      'milf'
+    ],
+    [[`m,me, ${colors.blue('mean')}`, 'Is a description'], true],
+    [`${colors.blue('list1')} |array`, 'thisis a desc for list1'],
+    [
+      'array1 |array',
+      `${colors.blue(
+        'array1'
+      )}'s description,so test a long description, LOL, no other meaning`,
+      []
+    ],
+    ['boolean1 |boolean', 'boolean s desc', false],
+    ['number1 |number', `i am number1's desc`, 0]
   ],
-  action(info)  {
-
+  action(info) {
+    console.log(`${colors.bgBlue(colors.white('info!'))}`, info);
   }
-})
+});
+
+// set the render options
+// 颜色设置
+// 缩进设置
+// 背景图设置
+// 头部设置（提供选项？）
+cmd.set({
+  render(i) {
+    // You can design it any way you want.
+    i = i.replace('mycmd', 'mycmd2');
+    return i
+      .replace('Flags:', 'Options:')
+      .replace(`${colors.red('Bun')} is a fast`, 'XBun is a fast');
+  },
+  group: {
+    Examples: ['Examples...']
+  },
+  tail: [
+    `(more flags in 'bun install--help', ${colors.underline(
+      'bun test --help'
+    )}, and ${colors.cyan('bun build --help')})`,
+    `\nLearn more about Bun: ${colors.blue('https://bun.sh/docs')}`,
+    `               Join our Discord community: https://bun.sh/discord`
+  ],
+  header: `${colors.red(
+    'Bun'
+  )} is a fast JavaScript runtime, package manager, bundler, and test runner.`
+});
 
 // 默认运行 install 命令
-cmd.default('install');
+cmd.default('i');
 
-cmd.footer(`
-Learn more about Bun:            https://bun.sh/docs
-Join our Discord community:      https://bun.sh/discord
-Hint: Use `xdw <command> --help` for more information about a command.
-`)
+cmd.sub(
+  ['i, install <lodash>'],
+  [
+    [colors.bgYellow('in'), `in's description`, `in's defaultValue`],
+    ['in2', `in2's description`, `in2's defaultValue`]
+  ],
+  (aaa) => {
+    console.log(`install`, aaa);
+  }
+);
+cmd.sub(
+  ['un,uninstall', `uninstall's description`],
+  [
+    // ['testun', 'description un"', 'defaultValue'],
+  ],
+  async (un) => {
+    console.log(`uninstall`, un);
+  }
+);
 
-cmd.sub([
-     ['install,i', 'install dependencies','default'],
-     args: [
-        ['-v,--view', 'description"', 'defaultValue']
-    ],
-    ],
-    ({ args, })=>{
-
-}).sub([
-    ['uninstall,u', 'xxsadasds']
-    ], async({ args })=>{
-
-})
-
+// run the cli, in the end
 cmd.run();
+```
 
+The following output：
 
-/*
-    /Projects
-   xdw
-  Usage: xdw [Flags] [command]
+```sh
+XBun is a fast JavaScript runtime, package manager, bundler, and test runner.
 
-  Commands:
-    help     Display help (version: 1.1.0)
+  Usage: mycli [Flags] [command]
 
-  Flags:
-    --help
-        Output usage information
-    -h, --help
-        Output usage information
-    -i, --info
-        get epub file basic info (default: smart case)
-
-    -M, --ma         convert the epub file to markdown format with autocorrect
-    -m, --md         convert the epub file to markdown format
-    -S, --sections   get epub file sections
-    -s, --structure  get epub file structure
-    -u, --unzip      unzip epub file
+  Options:
+         -t, --target         you kan see it is a description (default: "milf")
+    -m, -me, --mean           Is a description
+             --list1          thisis a desc for list1
+             --array1         array1's description,so test a long description, LOL, no other meaning (default: [])
+             --boolean1       boolean s desc (default: false)
+             --number1        i am number1's desc (default: 0)
 
   Examples:
-    Add a dependency from the npm registry
-    bun add zod
-    bun add zod@next
-    bun add zod@3.0.0
+    Examples...
 
-    Add a dev, optional, or peer dependency
-    bun add -d typescript
-    bun add --optional lodash
-    bun add --peer esbuild
+(more flags in 'bun install--help', bun test --help, and bun build --help)
 
-(more flags in bun install --help, bun test --help, and bun build --help)
-
-Learn more about Bun:            https://bun.sh/docs
-Join our Discord community:      https://bun.sh/discord
-Hint: Use `xdw <command> --help` for more information about a command.
-*/
-
+Learn more about Bun: https://bun.sh/docs
+               Join our Discord community: https://bun.sh/discord
 ```
 
 ## type
@@ -103,6 +129,7 @@ default: string. optional: `string`, `number`, `boolean`, `array`
 
 - [ ] support more colors (see `bun`)
 - [ ] support choices.
+- [ ] support more test
 
 ## any problem?
 

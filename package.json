@@ -1,0 +1,43 @@
+{
+  "name": "xwcli",
+  "description": "Opinionated, Simple and Efficient CLI Builder, happy to Use",
+  "license": "MIT",
+  "author": "ChandlerVer5 (https://github.com/uxiew)",
+  "main": "dist/index.mjs",
+  "type": "module",
+  "repository": "https://github.com/uxiew/xwcli",
+  "keywords": [
+    "terminal",
+    "shell",
+    "console",
+    "cli-framework",
+    "cli",
+    "node-cli",
+    "command",
+    "command-line",
+    "yargs",
+    "commander"
+  ],
+  "exports": {
+    ".": {
+      "require": "./index.cjs",
+      "import": "./index.mjs"
+    }
+  },
+  "scripts": {
+    "test": "jiti test/*.test.ts",
+    "coverage": "c8 npm test",
+    "clean": "rm -rf dist",
+    "prebuild": "npm run clean",
+    "build": "sa",
+    "release": "semantic-release",
+    "semantic-release": "semantic-release"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "ava": "^6.1.3",
+    "c8": "^10.1.2",
+    "jiti": "^1.21.6",
+    "uvu": "^0.5.6"
+  }
+}

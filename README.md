@@ -148,7 +148,7 @@ default: string. optional: `string`, `number`, `boolean`, `array`
 
 ## API
 
-### `define({name, version, args, action})`
+### `define(subCommandName)`
 
 Create the main CLI wrapper.
 
@@ -157,22 +157,8 @@ Create the main CLI wrapper.
 > If you run your Program without a Command and without specifying a default command, your Program will exit with a No command specified error.
 
 ```ts
-const prog = sade('xwcli');
-
-prog.define('hello');
-//=> only runs if :: `$ greet hello`
-
-// $ greet
-//=> error: No command specified.
-
-prog.default('i', '', { default: true });
-//=> runs as `$ greet` OR `$ greet howdy`
-
-// $ greet
-//=> runs 'howdy' handler
-
-// $ greet foobar
-//=> error: Invalid command
+// set `i` as the default command (`i` is a sub command alias name)
+cmd.default('i');
 ```
 
 ## TODO
@@ -182,7 +168,6 @@ prog.default('i', '', { default: true });
 - [ ] support more colors (see `bun`).
 - [ ] value hint.
 - [ ] choices.
-- [ ] replace log layout with [`minicolumns`](https://github.com/mrozio13pl/minicolumns)
 
 ## any problem?
 

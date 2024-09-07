@@ -21,6 +21,8 @@ const cmd = define({
     }
 })
 
+cmd.default('i')
+
 // set the render options
 // 颜色设置
 // 缩进设置

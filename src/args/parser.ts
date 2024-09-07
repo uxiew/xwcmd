@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Argv, ArgsOptions, Arrayable, Mapped } from './types';
-import { isFlag, isLongFlag, isShortFlag, toKebabCase, isNumericLike, toCamelCase, QUOTES_REGEX } from '../utils';
+import { isFlag, isLongFlag, isShortFlag, toKebabCase, isNumericLike, toCamelCase, QUOTES_REGEX, stripFlag } from '../utils';
 
 /**
  * Default options.
@@ -213,7 +213,7 @@ export function parse<T extends ArgsOptions>(args: Arrayable<string> | string, o
             // An arg like `-abc` will return `{ a: true, b: true, c: true}`.
             for (let j = 0; j < arg.length; j++) {
                 const opt = getAlias('-' + arg[j], alias) || arg[j];
-                result[camelize(opt.replace(/^-+/, ''))] = true;
+                result[camelize(stripFlag(opt))] = true;
             }
         }
     }

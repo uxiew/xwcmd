@@ -1,28 +1,24 @@
-import { colors, createColors, formatter } from "./colors/picocolors";
-import type { Meta, RenderSettings, Settings, Group, CmdOptions, Output } from "./types";
-import type { Argv } from "./args/types";
-import { argTrim, concatANSI, fillSpace, getExcludedANSILen, parseAlias } from "./utils";
+import { column, row, type ColumnOptions } from "minicolumns";
+import { colors } from "./colors/picocolors";
+import { concatANSI, fillSpace, print, stringLen, toArray } from "./utils";
+import type {
+  Meta, RenderSettings, Settings,
+  Output, FormatArgs,
+  SettingGroup
+} from "./types";
 
 export class Render {
-
-  /** 
-   * the most suitable final description's number of spaces from the left
-   * calculated by the longest flag's length
-   */
-  private lenForLayout = 8
-
 
   settings: RenderSettings = {
     indentLevel: 2,
     showDefaultValue: true,
-    needHelp: true,
+    defaultHelp: true,
+    help: true,
     /** default description's number of spaces from the left */
-    descPadLeft: 30,
+    descPadLeft: 28,
   }
 
   private render: (info: string) => string = (i) => i
-
-  parent: Render | null = null
 
   /**
    * Organize all the information to be output
@@ -39,7 +35,7 @@ export class Render {
    *  }
    * ```
    */
-  private output: Output = {
+  private extras: Output = {
     Header: [],
     Usage: [],
     Commands: [],
@@ -52,23 +48,21 @@ export class Render {
     return this.meta.type
   }
 
+  get parent() {
+    return this.meta.parent
+  }
+
   /** 
    * indent Level, default 2
    */
 
-  constructor(readonly meta: Meta, readonly info: { args: Argv, options: CmdOptions }) {
+  constructor(readonly meta: Meta, readonly flagInfo: FormatArgs[]) {
     this.addLine({
       group: 'Usage',
       line: this.type === 'sub'
-        ? [this.meta.name].concat(this.meta.alias).map(n => {
-          return `${colors.yellow(this.meta.parent?.name + ' ' + n)} ${colors.gray('[Flags] [...args]')}`
-        })
-        : `${colors.yellow(this.meta.name)} ${colors.gray('[Flags] [command]')}`
+        ? colors.yellow(this.meta.parent?.meta.name + ' ' + this.meta.name) + colors.gray(' [Flags] [...args]')
+        : colors.yellow(this.meta.name) + colors.gray(' [Flags] [command]')
     });
-    // Current command is 'sub2', its alias is 's2', and hint is the content after '<'
-
-    this.initArgs(info.options)
-    if (!this.settings.needHelp) this.addHelp()
   }
 
   /**
@@ -78,99 +72,66 @@ export class Render {
    * @param {string} other - need exclude the other infos's length
    */
   private calcPadLen(needPadLen: number, innerStr: string) {
-    return needPadLen + innerStr.length - getExcludedANSILen(innerStr)
+    return needPadLen + innerStr.length - stringLen(innerStr)
   }
 
-  private initArgs(options: CmdOptions) {
-    // this.addLine({
-    //   group: 'Commands',
-    //   line: `help     Display help(version: ${ this.meta.version })`
-    // })
-    const { description, default: defaultValue = {}, alias = {}, hints } = options
-    // display default value
-    const defaultInfo = (name: string) => typeof defaultValue[name] !== 'undefined' ? ` (default: ${typeof defaultValue[name] === 'string' ? '"' + defaultValue[name] + '"' : JSON.stringify(defaultValue[name])})` : ''
-    const valueHint = (name: string) => Array.isArray(hints[name]) ? hints[name].join(',') : typeof hints[name] === 'undefined' ? '' : hints[name]
 
-    let maxLenAlias = 0, maxLenName = 0
-    this.addLine({
-      group: 'Flags',
-      line: Object.entries(description).map(([name, desc], i, arr) => {
-        // @ts-expect-error hidden in the output
-        if (desc === false) return false
-        const aliasStr = alias[name].length > 0 ? alias[name].map(a => concatANSI(a, '-')).join(', ') + ', ' : ''
+  /**
+   * add Flags or Commands to output
+   */
+  addExtraInfo({ type, info }: { type: 'Commands' | 'Flags', info: FormatArgs[] }) {
+    let maxAliasLen = 0, padLeft = fillSpace(this.settings.indentLevel)
+    this.extras[type] = info.map(([alias, flag, hint, dataType, desc, defaultValue]) => {
+      const aliasFlag = alias ? alias.split(',').map(a => concatANSI(a, '-')).join(', ') : ''
+      const defaultV = typeof defaultValue === 'undefined' ? '' : colors.dim(` (default: ${JSON.stringify(defaultValue)})`)
+      const flagArr: string[] = [colors.yellow(aliasFlag), colors.yellow(type === 'Flags' ? (aliasFlag ? ', ' : '  ') + concatANSI(flag, '--') : flag), colors.dim(hint), desc + defaultV]
+      maxAliasLen = Math.max(maxAliasLen, stringLen(aliasFlag))
+      return flagArr
+    })
 
-        const visibleLenForAlias = getExcludedANSILen(aliasStr)
-        const visibleLenForName = getExcludedANSILen(name)
-        maxLenAlias = Math.max(maxLenAlias, visibleLenForAlias)
-        maxLenName = Math.max(maxLenName, visibleLenForName)
-
-        return [visibleLenForName, aliasStr, desc, name]
-      }).map((val) => {
-        const [vLen, alias, desc, name] = val as [boolean, string, string, string, string]
-        if (vLen === false) return ''
-
-        const paddedAlias = alias.padStart(this.calcPadLen(maxLenAlias, alias))
-
-        const lenBeforeName = maxLenAlias + this.settings.indentLevel + 2 + 2
-        const lenOfAliasAndName = maxLenName + lenBeforeName >= this.settings.descPadLeft ? maxLenName + lenBeforeName + 2 : this.settings.descPadLeft
-
-        const paddedName = name.padEnd(this.calcPadLen(lenOfAliasAndName - lenBeforeName, name))
-
-        return paddedAlias + concatANSI(paddedName, '--') + desc + (this.settings.showDefaultValue ? `${colors.gray(defaultInfo(name))} ` : '')
-      })
+    this.extras[type].forEach((flag) => {
+      flag[0] = flag[0].padStart(maxAliasLen + flag[0].length - stringLen(flag[0]))
+      flag.unshift(padLeft + fillSpace(2))
     })
   }
+
   /**
    * Change the Command's output usage.
    */
-  set({ render, group, tail, header, showDefaultValue, indentLevel = this.settings.indentLevel }: Settings) {
-    this.settings.indentLevel = indentLevel
+  set(settings: Settings) {
+    const {
+      render, header, Usage, examples, tail
+    } = { ...settings }
+    Object.assign(this.settings, settings)
+
     // change the output's group name or group's lines
-    if (typeof render === 'function') this.render = render
-
-    if (group) {
-      Object.entries(group).forEach(([name, logs]) => {
-        if (Object.keys(this.output).includes(name)) {
-          this.addLine({
-            group: name as Group,
-            line: logs,
-          })
-        }
-      })
+    if (typeof render === 'function') this.render = (str: string) => render(str, this.extras, this.settings)
+    if (Usage) {
+      this.extras.Usage = toArray(Usage)
     }
 
-    if (header || tail) {
-      [header, tail].forEach((group, i) => {
-        (typeof group !== 'undefined') && (Array.isArray(group) ? group : [group]).forEach((line) => this.addLine({ group: i === 0 ? 'Header' : 'Tail', line }))
+    if (header || examples || tail) {
+      [header, examples, tail].forEach((group, i) => {
+        (typeof group !== 'undefined') && toArray(group).forEach((line) => this.addLine({
+          group: i === 0
+            ? 'Header' : i === 1
+              ? 'Examples' : 'Tail',
+          line
+        }))
       })
     }
-
-    this.addLine({ group: 'Header', line: `------------test --------- `, loc: 'top' });
-
-    if (showDefaultValue) this.settings.showDefaultValue = showDefaultValue
-  }
-
-  addHelp() {
-    const flag = colors.yellow('-h, --help')
-    const cmdFlag = colors.gray('<command>') + ' --help'
-    const flagDesc = 'Print this help menu'
-    const cmdDesc = 'Print help text for command'
-
-    this
-      .addLine({
-        group: 'Flags',
-        line: flag + flagDesc.padStart(this.calcPadLeftLen(flagDesc, flag, this.lenForLayout)),
-        loc: 'bottom'
-      })
-      .addLine({
-        group: 'Commands',
-        line: cmdFlag + cmdDesc.padStart(this.calcPadLeftLen(cmdDesc, cmdFlag, this.lenForLayout)),
-        loc: 'bottom'
-      })
   }
 
   /**
-   * add a line to output
+   * add `--help` for log help info
+   */
+  addHelp() {
+    this.flagInfo.push(['h', 'help', '', 'string', 'Print this help menu'])
+    // this.info.alias ? (this.info.alias.help = ['h']) : (this.info.alias = { help: ['h'] })
+  }
+
+  /**
+   * add a line to extras
    *
    * @param {Group} group the group to which the text belongs
    * @param {string | string[]} line string to add
@@ -181,173 +142,119 @@ export class Render {
     line,
     loc = 'bottom'
   }: {
-    group: Group,
+    group: SettingGroup,
     line: string | string[],
     loc?: "top" | "bottom"
   }) {
     const method = loc === 'top' ? 'unshift' : 'push'
-    const lines = Array.isArray(line) ? line : [line]
-
-    /** @param {number} n - indentation level */
-    const fill = (n: number = 0) => lines.forEach((l) => l !== '' && this.output[group][method](fillSpace(n) + l))
-
-    switch (group) {
-      case 'Header': {
-        fill()
-      } break
-      case 'Usage':
-      case 'Commands':
-      case 'Flags':
-      case 'Examples': {
-        fill(this.settings.indentLevel + 2)
-      } break
-      case 'Tail': {
-        fill()
-      }
-        break;
-    }
-
+    toArray(line).forEach((l) => l !== '' && this.extras[group][method](l))
     return this
-  }
-
-  /** 
-   * group all infos, and render them by order
-   * 
-   * ```sh
-          * Usage: xwcmd[Flags][command]
-            * 
-   * Commands:
-   * help     Display help(version: 1.1.0)
-          * 
-   * Flags:
-   * --help
-          * Output usage information
-            * -S, --sections   get epub file sections
-              *   
-   * Examples:
-   * Add a dependency from the npm registry
-          * bun add zod
-            * 
-   * Learn more about Bun: https://bun.sh/docs
-   * ```
-   */
-  private group() {
-    const output = this.output
-    const { Header, Usage, Commands, Flags, Examples, Tail } = output
-    const lines = [
-      Header,
-      Usage,
-      Commands,
-      Flags,
-      Examples,
-      Tail
-    ]
-
-    return lines.filter(Boolean).join('\n')
-  }
-
-  /**
-   * alias: Options
-   */
-  private addFlags(flags: any) {
-
-  }
-
-  /**
-   * add usage examples
-   */
-  private addExample() {
-
   }
 
   /** 
    * show all command info on the terminal
    * * make link linkable
    * 
-   * @param {'mian'|'sub'} type - show main or sub command info, default 'main'
+   * @example
    * ```sh
-          * Usage: xwcmd[Flags][command]
-            * 
+   * this is a description for this command. (1.1.0)
+   * 
+   * Usage: xwcmd[Flags][command]
+   * 
    * Commands:
-   * help     Display help(version: 1.1.0)
-          * 
+   *   help             Display help
+   * 
    * Flags:
-   * --help
-          * Output usage information
-            * -S, --sections   get epub file sections
-              *   
+   *   --help           Output usage information
+   * -S, --sections   get epub file sections
+   *   
    * Examples:
-   * Add a dependency from the npm registry
-          * bun add zod
-            * 
+   *   Add a dependency from the npm registry
+   *   bun add zod
+   * 
    * Learn more about Bun: https://bun.sh/docs
    * ```
    */
-  show() {
-    this.group()
-
-    // this.addLine({
-    //   group: 'Commands',
-    //   line: Object.entries(description).map(([name, desc]) => {
-    //     const flagName = alias[name] ? alias[name].map(a => `- ${ a } `).join(', ') + `, --${ name } ` : `--${ name } `
-    //     const paddedFlag = flagName.padStart(14)
-    //     console.log(name, paddedFlag);
-    //     return `${ paddedFlag }${ fillSpace(paddedFlag.length) }${ desc }${ defaultInfo(name) } `
-    //   })
-    // })
-
-    console.log('sssssss:', this.meta, this.info, this.output);
+  display() {
+    type FormatOptions = Parameters<typeof row>[1]
     const padLeft = fillSpace(this.settings.indentLevel)
-    // TODO linkable
-    Object.entries(this.output).forEach(([name, lines], i) => {
-      const newLine = '\n'
-      if ("Usage" === name) {
-        lines.forEach((l, i) => {
-          console.log(this.render(
-            // when Header is empty, don't add a newLine before Usage
-            (this.output.Header.length === 0 || i !== 0 ? '' : newLine)
-            + padLeft + (i === 0 ? name : 'Alias') + ':' + (
-              i === 0
-                ? l.slice(this.settings.indentLevel + 1)
-                : l.slice(this.settings.indentLevel + 1)
-            )));
-        })
-        return
-      }
-      // Don't show those "Header,Tail" group name
-      else if (!"Header,Tail".includes(name)) {
-        if (this.type === 'sub') {
-          // handle sub command info
+    const newLine = '\n'
 
-        }
+    //  Commands and Flags Formater and Style
+    const FlagStyle = [{ separator: '', align: 'left' }, { separator: '' }, {}, { align: 'left', separator: fillSpace(4) }] as ColumnOptions
+    const format: (r: string[][], o?: FormatOptions) => [string[][], FormatOptions]
+      = (row, opt = { separator: '' }) => [row.map(a => (a.unshift(padLeft), a)), opt];
 
-        // no info to show
-        if (lines.length === 0) return;
-        // display header Group Name
-        console.log(this.render(newLine + padLeft + name + ':'));
-      }
-      // when Tail is not empty, add a newLine 
-      lines.length > 0 && console.log(this.render((name === 'Tail' ? newLine : '') + lines.join('\n')));
-    });
+    // Current command is 'sub2', its alias is 's2', and hint is the content after '<'
+    if (this.settings.help) this.addHelp()
+    this.addExtraInfo({ type: 'Flags', info: this.flagInfo })
+
+    //  ------ Header -------
+    if (this.extras.Header.length > 0) {
+      this.extras.Header.forEach((l) => print(l))
+      print('')
+    }
+
+    // ------- Usage -------
+    print(row(
+      ...format(
+        this.extras.Usage.map((n, i) => {
+          return [(i == 0 ? 'Usage: ' : ''), colors.yellow(n)]
+        }),
+      )
+    ))
+
+    // ---- Commands Alias (if has)------
+    if (this.meta.alias.length > 0) {
+      print(row(
+        ...format(
+          this.meta.alias.map((n, i) => {
+            return [(i == 0 ? 'Alias: ' : ''), this.meta.parent?.meta.name + ' ' + n]
+          }),
+        )
+      ))
+    }
+
+
+    // --------- Commands ---------
+    if (this.extras.Commands.length > 0) {
+      print(newLine + row(
+        ...format([
+          ['Commands:', '', ''],
+        ])
+      ))
+
+      //  Commands info
+      print(row(this.extras.Commands, FlagStyle));
+      print(newLine + padLeft + fillSpace(2) +
+        `For more info, run any command with the ${colors.gray(colors.italic('--help'))} flag.`)
+    }
+
+    if (this.extras.Flags.length > 0) {
+      // ------ Flags ------
+      print(newLine + row(
+        ...format([
+          ['Flags:', '', '']
+        ])
+      ));
+      print(row(this.extras.Flags, FlagStyle));
+    }
+
+    // ------- Examples ------
+    if (this.extras.Examples.length > 0) {
+      print(newLine + row(
+        ...format([
+          ['Examples:', '', ''],
+        ])
+      ))
+      this.extras.Examples.forEach((l) => print(l))
+    }
+
+    // -------- Tail ------
+    if (this.extras.Tail.length > 0) {
+      print('')
+      this.extras.Tail.forEach((l) => print(l))
+    }
   }
 
 }
-
-/**
- * 
- * 
- * @example
- * ```sh
-        Usage: xdw[Flags][command]
-        Examples:
-    Add a dependency from the npm registry
-    bun add zod
-    bun add zod @next
-    bun add zod @3.0.0
-
-    Add a dev, optional, or peer dependency
-    bun add - d typescript
-    bun add--optional lodash
-    bun add--peer esbuild
-          ```
- */

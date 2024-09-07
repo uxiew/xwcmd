@@ -18,6 +18,10 @@
     "yargs",
     "commander"
   ],
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "require": "./index.cjs",
@@ -25,7 +29,7 @@
     }
   },
   "scripts": {
-    "test": "jiti test/*.test.ts",
+    "test": "tsx test/*.test.ts",
     "coverage": "c8 npm test",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean",
@@ -37,7 +41,11 @@
     "@types/node": "^22.5.0",
     "ava": "^6.1.3",
     "c8": "^10.1.2",
-    "jiti": "^1.21.6",
+    "tsx": "^4.19.0",
     "uvu": "^0.5.6"
+  },
+  "dependencies": {
+    "minicolumns": "^1.0.1",
+    "strip-ansi": "^7.1.0"
   }
 }

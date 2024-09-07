@@ -1,9 +1,10 @@
-import type { ArgsOptions } from "./args/types";
-import { CmdError } from "./error";
-import type { Arg, Args, CmdOptions, DefineCommands, Meta, Resolvable } from "./types";
+import type { Arg, Args, CmdOptions, FormatArgs, Meta, Resolvable } from "./types";
+import stripAnsi from "strip-ansi";
 
 /** Regex to replace quotemark. */
 export const QUOTES_REGEX = /(^"|"$)/g;
+
+export const print = console.log
 
 /**
  * Check if a value is a flag. (e.g., `-f`, `--option`, `--option=value`)
@@ -42,7 +43,14 @@ export function toKebabCase(str: string): string {
 }
 
 /**
- * Convert string to camel-case.
+ * replace `--xxx` -> `xxx`
+ */
+export function stripFlag(str: string): string {
+    return str.replace(/^-+/, '')
+}
+
+/**
+ * Convert string to camel-case. `sss-aa` -> `sssAa`
  * @param {string} str String to convert.
  * @returns {string}
  */
@@ -63,20 +71,26 @@ export function isNumericLike(value: any): boolean {
     }
     return false;
 }
+export const toArray = (val: any | any[]) => Array.isArray(val) ? val : [val]
+
+export const parseHint = (val: string) => val.match(/<([^]*)>/)?.[1] ?? ''
 
 export const argTrim = (val: string) => {
-    let trimmed = val.replace(/<.*?>/, '')
+    let trimmed = val.replace(/<.*>/, '')
     trimmed = trimmed.replace(/\|.+$/, '');
     return trimmed.trim();
 }
 
-export const parseAlias = (val: string) => {
-    return val.split(/,(?![^<]*>)/).map(argTrim)
+/**
+ * @return {Array} all flags alias include flag itself, like `[i, in, install]`
+ */
+export const splitFlag = (val: string) => {
+    return val.split(/,(?![^<]*>)/)
 }
 
 type OptionalType = 'string' | 'boolean' | 'number' | 'array'
 
-function handleType(value: string): [OptionalType, string] {
+function parseType(value: string): [OptionalType, string] {
     const type = (/\|(.+)$/.exec(value)?.[1] ?? 'string').trim() as OptionalType
     return [type, argTrim(value)]
 }
@@ -86,19 +100,20 @@ function handleType(value: string): [OptionalType, string] {
  */
 function argsHandle(args: Arg, options: CmdOptions) {
     const [flags, description, defaultValue] = args
-    const flagArr = parseAlias(flags)
+    const flagArr = splitFlag(flags)
     const alias: string[] = []
-    flagArr.forEach((draftFlag, i) => {
+    flagArr.forEach((f, i) => {
+        const draftFlag = stripAnsi(f)
         const flag = argTrim(draftFlag)
         if (i === flagArr.length - 1) {
-            const [type, val] = handleType(draftFlag);
+            const [type, val] = parseType(draftFlag);
             options[type] ? options[type].push(val) : (options[type] = [val]);
             (options.alias || (options.alias = {}))[val] = alias
             if (typeof defaultValue !== 'undefined') {
                 (options.default || (options.default = {}))[val] = defaultValue
             }
             options.description[flag] = description ?? ''
-            options.hints[val] = (draftFlag).match(/<(.*?)>/)?.[1] ?? ''
+            options.hints[val] = parseHint(draftFlag)
         } else {
             alias.push(flag)
         }
@@ -106,25 +121,32 @@ function argsHandle(args: Arg, options: CmdOptions) {
 }
 
 /**
- * parse define args to args Parser
- *      number: ['size'],
- *      string: ['foo', 'name', 'surname'],
- *      boolean: ['dice', 'friendly'],
- *      array: ['list', 'my-numbers'],
- *      alias: { foo: ['f'] },
- *      default: { surname: 'obama', list: [] }
+ * parse define params args to args Parser，result like this:
+ * 
+ * @example
+ * ```js
+ * {
+ *   description: {},
+ *   hints: {}，
+ *   alias: { foo: ['f'] },
+ *   default: { surname: 'obama', list: [] }
+ *   number: ['size'],
+ *   string: ['foo', 'name', 'surname'],
+ *   boolean: ['dice', 'friendly'],
+ *   array: ['list', 'my-numbers'],
+ * }
+ * ```
  */
-export function formatArgs(args: Args) {
+export function parseCliArgs(args: Args) {
     const options: CmdOptions = {
+        alias: {},
         description: {},
         hints: {}
     };
-    if (args.length === 0) {
-        return options
-    }
+    if (args.length === 0) return options
     args.forEach((arg) => {
         const [flags, description] = arg
-        // `Arg | [Arg, InOutput]` show in output or not
+        // THINK: `Arg | [Arg, InOutput]` show in output or not
         if (Array.isArray(flags)) {
             const showInOutput = !!description
             const flagArr = flags[0].split(/,(?![^<]*>)/)
@@ -139,21 +161,49 @@ export function formatArgs(args: Args) {
     return options
 }
 
-
+/**
+ *  split alias and flag, and hint value,default value
+ * @example
+ *
+ * ```js
+ * [
+ *     [`m,me, ${colors.blue('mean')} <hint> | array`, 'Is a description', 'default value],
+ * ]
+ * (to)->
+ * [
+ *     [`m,me`, `${colors.blue('mean')}`, valueHint, `array`, 'Is a description', 'default value`],
+ * ]
+ * ```
+ */
+export function formatArgs(args: Args) {
+    return args.map((arg) => {
+        const alias = splitFlag(arg.shift() as string)
+        const flag = alias.pop()!
+        const [type, val] = parseType(flag)
+        return [alias.join(','), val, parseHint(flag), type, ...arg]
+    }) as FormatArgs[]
+}
 /**
  * method for render Output, fill space like indent
  */
 export function fillSpace(n: number) { return ' '.repeat(n) }
 
 export function matchSubCmd(meta: Meta, currentCmd: string) {
-    return meta.alias.concat(meta.name).some((n: string) => n.trim() === currentCmd)
+    return meta.alias.concat(meta.name).some((n: string) => stripAnsi(n) === currentCmd)
 }
 
 /**
  * remove color ANSI chars,get real length for layout
  */
-export function getExcludedANSILen(str: string) {
-    return str.replace(/\x1B\[[0-9;]*[mGK]/g, '').length
+export function stringLen(str: string) {
+    return stripAnsi(str).length
+}
+
+/**
+ * test a text is a link
+ */
+export function isLink(text: string) {
+    return /^(https?|ftp):\/\//.test(text)
 }
 
 /**
@@ -166,81 +216,4 @@ export function concatANSI(str: string, insertStr: string) {
 
 export function resolveValue<T>(input: Resolvable<T>): T | Promise<T> {
     return typeof input === "function" ? (input as any)() : input;
-}
-
-/**
-* @param text The text to be output.
-* @param color The color code in ANSI escape sequence format.
-* 
-* @example
-*
-* ```js
-*  setColorOutput('This text is green.', "1;34;90");
-* ```
-* 
-*/
-export function setColor(text: string, color: string = '\x1b[32m') {
-    // ANSI escape sequence for resetting color to default after output
-    const Reset = "\x1b[0m"  // reset all style
-    // foreground color
-    const FgBlack = "\x1b[30m"
-    const FgRed = "\x1b[31m"
-    const FgGreen = "\x1b[32m"
-    const FgYellow = "\x1b[33m"
-    const FgBlue = "\x1b[34m"
-    const FgMagenta = "\x1b[35m"
-    const FgCyan = "\x1b[36m"
-    const FgWhite = "\x1b[37m"
-    const FgGray = "\x1b[90m"
-    const FgLightRed = "\x1b[91m"
-    const FgLightGreen = "\x1b[92m"
-    const FgLightYellow = "\x1b[93m"
-    const FgLightBlue = "\x1b[94m"
-    const FgLightMagenta = "\x1b[95m"
-    const FgLightCyan = "\x1b[96m"
-    const FgLightWhite = "\x1b[97m"
-    // background color
-    const BgBlack = "\x1b[40m"
-    const BgRed = "\x1b[41m"
-    const BgGreen = "\x1b[42m"
-    const BgYellow = "\x1b[43m"
-    const BgBlue = "\x1b[44m"
-    const BgMagenta = "\x1b[45m"
-    const BgCyan = "\x1b[46m"
-    const BgWhite = "\x1b[47m"
-    const BgGray = "\x1b[100m"
-    const BgLightRed = "\x1b[101m"
-    const BgLightGreen = "\x1b[102m"
-    const BgLightYellow = "\x1b[103m"
-    const BgLightBlue = "\x1b[104m"
-    const BgLightMagenta = "\x1b[105m"
-    const BgLightCyan = "\x1b[106m"
-    const BgLightWhite = "\x1b[107m"
-    // mode
-    const Bold = "\x1b[1m"
-    const Dim = "\x1b[2m"
-    const Italic = "\x1b[3m"
-    const Underline = "\x1b[4m"
-    const Blink = "\x1b[5m"
-    const Reverse = "\x1b[7m"
-    const Hidden = "\x1b[8m"
-    const Strikethrough = "\x1b[9m"
-
-    // set foreground and background color
-    const [mode, fgColor, bgColor] = color.split(';');
-
-    // the specified color
-    let coloredText = '';
-
-    if (mode) {
-        coloredText += `\x1b[${mode}m`;
-    }
-    if (fgColor) {
-        coloredText += `\x1b[${fgColor}m`;
-    }
-
-    if (bgColor) {
-        coloredText += `\x1b[${bgColor}m`;
-    }
-    return coloredText += text + Reset;
 }

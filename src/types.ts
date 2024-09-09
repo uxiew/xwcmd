@@ -10,9 +10,8 @@ export type CmdOptions = ArgsOptions & {
 }
 
 type ActionContext = {
-    rawArg: Command['rawArg'],
     args: Command['resolved'],
-    options: Command['options'],
+    // options?: Command['options'],
 }
 
 export type Group = 'Header' | 'Tail' | 'Usage' | 'Commands' | 'Flags' | 'Examples'
@@ -81,11 +80,11 @@ export interface Settings extends Partial<RenderSettings> {
 export interface Meta {
     /** command name */
     name: string,
-    version: string,
+    version?: string,
     description?: string,
-    type: 'main' | 'sub',
-    alias: string[]
-    hint: string,
+    type?: 'main' | 'sub',
+    alias?: string[]
+    hint?: string,
     /** parent Render */
     parent?: null | Render,
     /** command type */

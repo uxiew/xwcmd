@@ -142,17 +142,32 @@ Learn more about Bun: https://bun.sh/docs
                Join our Discord community: https://bun.sh/discord
 ```
 
-## type
-
-default: string. optional: `string`, `number`, `boolean`, `array`
-
 ## API
 
-### `define(subCommandName)`
+xwcli supports several commands for managing different tasks:
 
-Create the main CLI wrapper.
+### type
 
-### `default`
+### `define(options)`
+
+Create the main Command.
+
+`options`:
+meta, args, action
+
+args could have those data type: `string`, `number`, `boolean`, `array`, default: `string`.
+
+### `sub(subCommandMeta, args, action)`
+
+define sub-command
+
+### `set(options)`
+
+Set configuration options
+
+### `default()`
+
+Default command execution
 
 > If you run your Program without a Command and without specifying a default command, your Program will exit with a No command specified error.
 
@@ -160,6 +175,20 @@ Create the main CLI wrapper.
 // set `i` as the default command (`i` is a sub command alias name)
 cmd.default('i');
 ```
+
+### examples
+
+### `run()`
+
+last moust call `run` method to run the cli.
+
+### `version()`
+
+Display version information
+
+### `help()`
+
+Display help information
 
 ## TODO
 

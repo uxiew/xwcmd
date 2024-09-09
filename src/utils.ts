@@ -75,7 +75,10 @@ export const toArray = (val: any | any[]) => Array.isArray(val) ? val : [val]
 
 export const parseHint = (val: string) => val.match(/<([^]*)>/)?.[1] ?? ''
 
-export const argTrim = (val: string) => {
+/**
+ * remove `<xxx>`、`| xxx` and trim space
+ */
+export const cleanArg = (val: string) => {
     let trimmed = val.replace(/<.*>/, '')
     trimmed = trimmed.replace(/\|.+$/, '');
     return trimmed.trim();
@@ -85,14 +88,17 @@ export const argTrim = (val: string) => {
  * @return {Array} all flags alias include flag itself, like `[i, in, install]`
  */
 export const splitFlag = (val: string) => {
-    return val.split(/,(?![^<]*>)/)
+    return val.split(/,(?![^<]*>)/).map((f) => f.trim())
 }
 
 type OptionalType = 'string' | 'boolean' | 'number' | 'array'
 
-function parseType(value: string): [OptionalType, string] {
-    const type = (/\|(.+)$/.exec(value)?.[1] ?? 'string').trim() as OptionalType
-    return [type, argTrim(value)]
+/**
+ * parse flag and it's type from string like `parse | number ` 
+ */
+export function parseType(value: string): [OptionalType, string] {
+    const type = (/\|(.+)$/.exec(value.replace(/<.*>/, ''))?.[1] ?? 'string').trim() as OptionalType
+    return [type, cleanArg(value)]
 }
 
 /**
@@ -104,7 +110,7 @@ function argsHandle(args: Arg, options: CmdOptions) {
     const alias: string[] = []
     flagArr.forEach((f, i) => {
         const draftFlag = stripAnsi(f)
-        const flag = argTrim(draftFlag)
+        const flag = cleanArg(draftFlag)
         if (i === flagArr.length - 1) {
             const [type, val] = parseType(draftFlag);
             options[type] ? options[type].push(val) : (options[type] = [val]);
@@ -150,7 +156,7 @@ export function parseCliArgs(args: Args) {
         if (Array.isArray(flags)) {
             const showInOutput = !!description
             const flagArr = flags[0].split(/,(?![^<]*>)/)
-            const flag = argTrim(flagArr[flagArr.length - 1])
+            const flag = cleanArg(flagArr[flagArr.length - 1])
             // @ts-expect-error set hidden
             if (!showInOutput) options.description[flag] = false
             else argsHandle(flags, options)
@@ -189,7 +195,7 @@ export function formatArgs(args: Args) {
 export function fillSpace(n: number) { return ' '.repeat(n) }
 
 export function matchSubCmd(meta: Meta, currentCmd: string) {
-    return meta.alias.concat(meta.name).some((n: string) => stripAnsi(n) === currentCmd)
+    return meta.alias!.concat(meta.name).some((n: string) => stripAnsi(n) === currentCmd)
 }
 
 /**

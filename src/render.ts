@@ -205,10 +205,10 @@ export class Render {
     ))
 
     // ---- Commands Alias (if has)------
-    if (this.meta.alias.length > 0) {
+    if (this.meta.alias!.length > 0) {
       print(row(
         ...format(
-          this.meta.alias.map((n, i) => {
+          this.meta.alias!.map((n, i) => {
             return [(i == 0 ? 'Alias: ' : ''), this.meta.parent?.meta.name + ' ' + n]
           }),
         )

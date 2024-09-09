@@ -1,5 +1,6 @@
 import { colors } from './colors/picocolors'
 import { Meta } from './types'
+import { print } from './utils'
 
 export class CmdError extends Error {
 
@@ -11,7 +12,7 @@ export class CmdError extends Error {
 }
 
 export function log(type = '', ...message: any[]) {
-    console.log(colors.cyan('[XWCMD]: ' + type) + ' '), message.forEach((m) => console.log(m))
+    print(colors.cyan('[XWCMD]: ' + type) + ' '), message.forEach((m) => print(m))
 }
 
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg style="margin:0 auto;display:block;width:200px;height:200px" viewBox="0 0 160 160" version="1.1">
+<svg style="margin:0 auto;display:block;width:200px;height:200px" viewBox="0 0 160 160">
   <g id="root" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
   <rect fill="transparent" x="0" y="0" width="160" height="160"></rect><circle fill="#70acb1" cx="80" cy="80" r="70"></circle><g id="Group" transform="translate(24.000000, 59.000000)"><rect id="Rectangle-17" x="0" y="2" width="112" height="18"></rect><text font-size="18" font-weight="700" letter-spacing=".81" fill="#59606d" data-text-alignment="C" font-style="normal"><tspan x="26.254165649414062" y="17">XWCLI</tspan></text></g>
   <rect x="68" y="84" width="24" height="24" display="none" fill="#59606d"></rect>

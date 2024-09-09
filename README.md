@@ -1,6 +1,6 @@
-# xwcli
+<img style="width:100%; height:200px" src="https://cdn.jsdelivr.net/gh/uxiew/xwcli@main/xwcli.svg"/>
 
-![xwcli](./xwcli.svg)
+# xwcli
 
 Opinionated, Simple and Efficient CLI Builder. But more flexible style, happy to Use.
 

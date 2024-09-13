@@ -29,7 +29,7 @@ function parseValue(val: any, options: ArgsOptions): any {
 
 /**
  * Looks for options from given alias.
- * @param {string} val Alias to look for.
+ * @param {string} val `-x` Alias to look for.
  * @param {Mapped<Arrayable<string>>} alias Aliases.
  * @returns {string | undefined}
  * @private
@@ -98,7 +98,7 @@ function getAlias(val: string, alias: Mapped<Arrayable<string>>): string | undef
  * }
  * ```
  */
-export function parse<T extends ArgsOptions>(args: Arrayable<string> | string, options = {} as T): Argv<T['populate--'] extends boolean ? T['populate--'] : false> {
+export function parse<T extends ArgsOptions>(args: Arrayable<string> | string, options = {} as T): Argv<T['populate--'] extends boolean ? T['populate--'] : false> | undefined {
     options = { ...defaultOptions, ...options };
 
     const result: Argv = { _: [] };
@@ -146,7 +146,7 @@ export function parse<T extends ArgsOptions>(args: Arrayable<string> | string, o
             continue;
         }
         if (typeof (options.unknown) === 'function' && !getAlias(arg, alias) && !flags.includes(arg.replace(/-/g, ''))) {
-            options.unknown(args[i].split('=')[0]);
+            if (options.unknown(args[i].split('=')[0]) === false) return;
         }
         if (isLongFlag(arg)) {
             // Long option (e.g., --option or --option=value)

@@ -2,22 +2,27 @@ import type { ArgsOptions } from "./args/types";
 import type { Command } from "./command";
 import type { Render } from "./render";
 
+export type ProcessArgv = typeof process['argv']
+
 export type Awaitable<T> = () => T | Promise<T>;
 export type Resolvable<T> = T | Promise<T> | (() => T) | (() => Promise<T>);
 
 export type CmdOptions = ArgsOptions & {
-    [key in 'description' | 'hints']: Record<string, string>
+    required: string[]
+    description: Record<string, string>;
+    hints: Record<string, string>;
 }
 
 type ActionContext = {
-    args: Command['resolved'],
+    args: ReturnType<Command['parse']>,
+    default: Record<string, any>;
     // options?: Command['options'],
 }
 
 export type Group = 'Header' | 'Tail' | 'Usage' | 'Commands' | 'Flags' | 'Examples'
 export type SettingGroup = Exclude<Group, 'Commands' | 'Flags'>
 
-export type CommandAction = (context: ActionContext) => Awaited<any>
+export type CommandAction = (arg: ActionContext['args'], defaultResult?: ActionContext['default']) => Awaited<any>
 
 export type Output = Record<SettingGroup, string[]> & Record<'Commands' | 'Flags', string[][]>
 
@@ -52,8 +57,6 @@ export interface RenderSettings {
     indentLevel: number
     /** show default value, default `true`*/
     showDefaultValue: boolean
-    /** default help when no default command is provided, default `true` */
-    defaultHelp: boolean
     /** print help info, default `true`*/
     help: boolean
     /** default description's number of spaces from the left, default `28` */
@@ -61,8 +64,6 @@ export interface RenderSettings {
 }
 
 export interface Settings extends Partial<RenderSettings> {
-    /** event before rendering ends, could edit the terminal ouput */
-    render?: (logInfo: string, output: Output, settings: RenderSettings) => string
     /**
      * tail Extra info
      * 

@@ -1,8 +1,12 @@
-<img style="width:100%; height:200px" src="https://cdn.jsdelivr.net/gh/uxiew/xwcli@main/xwcli.svg"/>
+<img style="width:100vw;height:200px" src="https://cdn.jsdelivr.net/gh/uxiew/xwcli@main/xwcli.svg"/>
 
 # xwcli
 
 Opinionated, Simple and Efficient CLI Builder. But more flexible style, happy to Use.
+
+- Customize some style styles and outputs
+- Just a few simple character definitions
+- Support multi-level subcommands, theoretically can be unlimited subcommand nesting
 
 ## Usage
 
@@ -18,29 +22,24 @@ using it:
 #!/usr/bin/env node
 import { define, colors } from 'xwcli';
 
-import { define, colors } from '../src/index';
-
 // describe('test cli base', () => {
 const cmd = define({
   name: 'mycli',
-  version: '1.1.22-canary.96+df33f2b2a',
+  version: '1.0.1',
   args: [
     [
       colors.red('t') + ',target <valueHint>',
-      `You kan see it ${colors.blue('is')} a description`,
+      `it ${colors.blue('is')} a description`,
       'astronaut'
     ],
-    [[`m,me, ${colors.blue('mean')}`, 'Is a description'], true],
-    [`${colors.blue('list1')} |array`, 'Thisis a desc for list1'],
     [
-      'a,array1 |array',
-      `${colors.blue(
-        'array1'
-      )}'s description,so test a long description, LOL, no other meaning`,
-      []
+      [
+        `m,me, ${colors.blue('mean')}`,
+        'Is a mean description with `true` default value'
+      ],
+      true
     ],
-    ['boolean1 |boolean', 'Boolean s desc', false],
-    ['number1 |number', `I am number1's desc`, 0]
+    [`${colors.blue('files')} |array`, 'This is a desc for files']
   ],
   action(info) {
     console.log(`${colors.bgBlue(colors.white('info!'))}`, info);
@@ -48,10 +47,6 @@ const cmd = define({
 });
 
 // set the render options
-// 颜色设置
-// 缩进设置
-// 背景图设置
-// 头部设置（提供选项？）
 cmd.set({
   render(i) {
     // You can design it any way you want.
@@ -137,39 +132,88 @@ Learn more about Bun: https://bun.sh/docs
 
 ## API
 
-xwcli supports several commands for managing different tasks:
-
-### type
+process argv parser base on [ofi](https://github.com/mrozio13pl/ofi).
 
 ### `define(options)`
 
-Create the main Command.
+Create the main Command. the `options` is a object, reference above example.
 
-`options`:
-meta, args, action
+#### `options.args`
 
-args could have those data type: `string`, `number`, `boolean`, `array`, default: `string`.
+Let me explain, for examples:
+
+```ts
+import { colors } from 'xwcli'
+...
+ [`f,${colors.blue('files')} <value_hint> |array`, 'This is a description for files flag' , []]
+```
+
+The first parameter is a flag and it's aliases (this example is `-f`,`---files`), the second is this flag's description, and the third is the default value (this example is `[]`).
+
+`colors.blue()` function from [alexeyraspopov/picocolors](https://gitub.com/alexeyraspopov/picocolors), so you can use multicolor in your cli. Like highlighting some hints, or arg
+
+`<value_hint>` is a hint for the value, define by `<>` parentheses. like description for the value.
+
+The `|` is a separator for the data type, `array` means the value is an array.
+The type of arg is defined by `| <datatype>` format, `<datatype>` could have those data type: `string`, `number`, `boolean`, `array`, default: `string`.
+
+The type is automatically converted for you, you can also specify the default value.
+
+#### `options.action`
+
+The action function is called when the command is executed.
+
+#### `options.name`
+
+The name of the command.
+
+#### `options.version`
+
+The version of the command.
 
 ### `sub(subCommandMeta, args, action)`
 
-define sub-command
+Add a new sub-command to the CLI.
 
-### `set(options)`
+```ts
+cmd.sub(
+  ['i,in, install [pkg] <lodash, axios, react>'],
+  [
+    [`${colors.bgYellow('in')} | number`, `in's description`, 19],
+    ['in2', `in2's description`, `in2's defaultValue`]
+  ],
+  (args, { pkg }) => {
+    console.log(`install+++`, args, pkg);
+  }
+);
+```
+
+The first parameter `subCommandMeta` is an array of strings that describe the sub-command. like a item defined in `args`
+
+The second parameter `args` is an array of flags and their options. it's the same as the `args` parameter in the `define` method.
+
+The third parameter `action` is a function that is called when the sub-command is executed.
+
+`subCommandMeta`
+
+### `set(options: Settings)`
 
 Set configuration options
 
-### `default()`
+### `default(cmdDefaultParam: string)`
 
-Default command execution
+Default command parameters.
 
-> If you run your Program without a Command and without specifying a default command, your Program will exit with a No command specified error.
+for
 
 ```ts
-// set `i` as the default command (`i` is a sub command alias name)
-cmd.default('i');
+// set `execute` as the default command (`x` is a sub command alias name)
+cmd.default('[x,execute [pkg!|array]]');
 ```
 
-### examples
+### `examples()`
+
+Display examples information
 
 ### `run()`
 
@@ -185,11 +229,10 @@ Display help information
 
 ## TODO
 
-- [ ] more test
-- [ ] better TypeScript support.
+- [x] more test
+- [x] value hint.
+- [x] choices.
 - [ ] support more colors (see `bun`).
-- [ ] value hint.
-- [ ] choices.
 
 ## any problem?
 

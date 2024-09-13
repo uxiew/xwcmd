@@ -6,6 +6,7 @@
     "esModuleInterop": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
     "types": ["vitest/globals"]
   },
   "include": ["src/**/*.ts", "test/**/*.ts"]

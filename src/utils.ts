@@ -1,5 +1,9 @@
-import type { Arg, Args, CmdOptions, FormatArgs, Meta, Resolvable } from "./types";
+import { XWCLIError } from "./error";
+import type { Arg, Args, CmdOptions, FormatArgs, Meta, ProcessArgv, Resolvable } from "./types";
 import stripAnsi from "strip-ansi";
+
+export const FLAG_STR = '--'
+export const DEFAULT_STR = '__'
 
 /** Regex to replace quotemark. */
 export const QUOTES_REGEX = /(^"|"$)/g;
@@ -39,7 +43,19 @@ export function isLongFlag(str: string): boolean {
  * @returns {string}
  */
 export function toKebabCase(str: string): string {
+
     return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+}
+/**
+ * Check that the required arg is passed in
+ */
+export function checkRequired(options: CmdOptions, args: ProcessArgv) {
+    args.some((a) => {
+        if (options.alias && options.alias[a]) return true
+    })
+    // if (required.length > 0) {
+    //     throw new XWCLIError(`The required args is missing: ${required.join(',')}`)
+    // }
 }
 
 /**
@@ -71,24 +87,73 @@ export function isNumericLike(value: any): boolean {
     }
     return false;
 }
+
 export const toArray = (val: any | any[]) => Array.isArray(val) ? val : [val]
 
-export const parseHint = (val: string) => val.match(/<([^]*)>/)?.[1] ?? ''
+/**
+ * Parse command-line arguments.
+ * @example
+ * ```js
+ *   ' <axx|c> ' -> 'axx|c'
+ * ```
+ */
+export const parseByChar = (val: string, symbols = ['<', '>']) => val.match(new RegExp(symbols[0] + '([^]*)' + symbols[1]))?.[1] ?? ''
+
+export const cleanDefaultFlags = (val: string) => val.replace(DEFAULT_PREFIX, '')
+/**
+ * Parse command-line arguments.
+ * @example
+ *
+ * ```js
+ *   [pkg!, re!|boolean, files|array]
+ *    -> 
+ *   { 
+ *     string: ['pkg'],
+ *     boolean: ['re'],
+ *     array: [files], 
+ *     required['pkg', 're']
+ *   }
+ * ```
+ */
+export const parseDefaultParams = (defaultFlag: string) => {
+    const result = {
+        description: {},
+        alias: {},
+        hints: {},
+        required: [],
+        _: [] as string[]
+    }
+    const params = (defaultFlag.match(/\[([^]*)\]/)?.[1] ?? '')
+    if (params.length > 0)
+        params.split(',').forEach(param => {
+            const p = param.trim()
+            argsHandle([p, ''], result)
+            result._.push(cleanArg(p.replace(/!/, '')))
+        })
+    else return
+    return result
+}
 
 /**
  * remove `<xxx>`、`| xxx` and trim space
  */
 export const cleanArg = (val: string) => {
-    let trimmed = val.replace(/<.*>/, '')
-    trimmed = trimmed.replace(/\|.+$/, '');
+    let trimmed = val.replace(/<.*>/, '').replace(/(\[.*\])/g, (a) => a.replace(/\|/g, '#')).replace(/\|.+$/, '').replace('#', '|')
     return trimmed.trim();
 }
 
 /**
- * @return {Array} all flags alias include flag itself, like `[i, in, install]`
+ * @return {Array} all flags alias include flag itself.
+ * @example
+ *
+ * ```js
+ *  [i, in, sxsinstall [aa!|number] <hintxxx> | asd]
+ * ->
+ *  ['i', 'in','sxsinstall <hintxxx> | asd']
+ * ```
  */
 export const splitFlag = (val: string) => {
-    return val.split(/,(?![^<]*>)/).map((f) => f.trim())
+    return val.replace(/\[(.+)\]/, '').split(/,(?![^<]*>)/).map((f) => f.trim())
 }
 
 type OptionalType = 'string' | 'boolean' | 'number' | 'array'
@@ -112,14 +177,18 @@ function argsHandle(args: Arg, options: CmdOptions) {
         const draftFlag = stripAnsi(f)
         const flag = cleanArg(draftFlag)
         if (i === flagArr.length - 1) {
-            const [type, val] = parseType(draftFlag);
+            let [type, val] = parseType(draftFlag);
+            if (val.endsWith('!')) {
+                val = val.slice(0, -1)
+                options.required.push(val)
+            }
             options[type] ? options[type].push(val) : (options[type] = [val]);
             (options.alias || (options.alias = {}))[val] = alias
             if (typeof defaultValue !== 'undefined') {
                 (options.default || (options.default = {}))[val] = defaultValue
             }
-            options.description[flag] = description ?? ''
-            options.hints[val] = parseHint(draftFlag)
+            options.description[val] = description ?? ''
+            options.hints[val] = parseByChar(draftFlag)
         } else {
             alias.push(flag)
         }
@@ -140,6 +209,7 @@ function argsHandle(args: Arg, options: CmdOptions) {
  *   string: ['foo', 'name', 'surname'],
  *   boolean: ['dice', 'friendly'],
  *   array: ['list', 'my-numbers'],
+ *   required: ['list', 'my-numbers'],
  * }
  * ```
  */
@@ -147,7 +217,8 @@ export function parseCliArgs(args: Args) {
     const options: CmdOptions = {
         alias: {},
         description: {},
-        hints: {}
+        hints: {},
+        required: []
     };
     if (args.length === 0) return options
     args.forEach((arg) => {
@@ -173,20 +244,27 @@ export function parseCliArgs(args: Args) {
  *
  * ```js
  * [
- *     [`m,me, ${colors.blue('mean')} <hint> | array`, 'Is a description', 'default value],
+ *     [`m,me, ${colors.blue('mean')}! <hint> |array`, 'Is a description', 'default value],
  * ]
- * (to)->
+ * ->
  * [
- *     [`m,me`, `${colors.blue('mean')}`, valueHint, `array`, 'Is a description', 'default value`],
+ *     [`m,me`, `${colors.blue('mean')}`, `hint`, `array`, 'Is a description', 'default value`],
  * ]
  * ```
  */
 export function formatArgs(args: Args) {
     return args.map((arg) => {
-        const alias = splitFlag(arg.shift() as string)
-        const flag = alias.pop()!
+        const flags = arg.shift();
+        if (typeof flags !== 'string') {
+            throw new XWCLIError('The args definition error.');
+        }
+        const alias = splitFlag(flags)
+        const flag = alias.pop()
+        if (flag === undefined) {
+            throw new XWCLIError('The args missing flag!');
+        }
         const [type, val] = parseType(flag)
-        return [alias.join(','), val, parseHint(flag), type, ...arg]
+        return [alias.join(','), val, parseByChar(flag), type, ...arg]
     }) as FormatArgs[]
 }
 /**

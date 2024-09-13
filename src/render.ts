@@ -1,4 +1,4 @@
-import { column, row, type ColumnOptions } from "minicolumns";
+import { row, type ColumnOptions } from "minicolumns";
 import { colors } from "./colors/picocolors";
 import { concatANSI, fillSpace, print, stringLen, toArray } from "./utils";
 import type {
@@ -12,13 +12,10 @@ export class Render {
   settings: RenderSettings = {
     indentLevel: 2,
     showDefaultValue: true,
-    defaultHelp: true,
     help: true,
     /** default description's number of spaces from the left */
     descPadLeft: 28,
   }
-
-  private render: (info: string) => string = (i) => i
 
   /**
    * Organize all the information to be output
@@ -26,7 +23,7 @@ export class Render {
    *
    * ```js
    *  {
-   *    Usage: ['xwcmd [Flags] [command]'],
+   *    Usage: ['xwcli [Flags] [command]'],
    *    Commands: [
    *      '-h, --help     Display help (version: 1.1.0)'
    *      'xxx'
@@ -52,6 +49,7 @@ export class Render {
     return this.meta.parent
   }
 
+
   /** 
    * indent Level, default 2
    */
@@ -61,7 +59,7 @@ export class Render {
       group: 'Usage',
       line: this.type === 'sub'
         ? colors.yellow(this.meta.parent?.meta.name + ' ' + this.meta.name) + colors.gray(' [Flags] [...args]')
-        : colors.yellow(this.meta.name) + colors.gray(' [Flags] [command]')
+        : colors.yellow(this.meta.name) + colors.gray(' <command> [...flags] [...args]')
     });
   }
 
@@ -100,12 +98,11 @@ export class Render {
    */
   set(settings: Settings) {
     const {
-      render, header, Usage, examples, tail
+      header, Usage, examples, tail
     } = { ...settings }
     Object.assign(this.settings, settings)
 
     // change the output's group name or group's lines
-    if (typeof render === 'function') this.render = (str: string) => render(str, this.extras, this.settings)
     if (Usage) {
       this.extras.Usage = toArray(Usage)
     }
@@ -159,7 +156,7 @@ export class Render {
    * ```sh
    * this is a description for this command. (1.1.0)
    * 
-   * Usage: xwcmd[Flags][command]
+   * Usage: xwcli [Flags] [command]
    * 
    * Commands:
    *   help             Display help

@@ -1,6 +1,5 @@
 import { DefaultValue } from "../types";
 
-// type Arrayable<T> = Array<DefaultValue<T>>;
 type Arrayable<T> = T[];
 type Mapped<T> = Record<string, T>;
 type Anyable<T extends string | number | symbol> = Record<T, any>;

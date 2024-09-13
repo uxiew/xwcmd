@@ -4,7 +4,7 @@
   "description": "Opinionated, Simple and Efficient CLI Builder, happy to Use",
   "license": "MIT",
   "author": "ChandlerVer5 (https://github.com/uxiew)",
-  "repository": "https://github.com/uxiew/xwcli",
+  "repository": "https://github.com/uxiew/xwcmd",
   "keywords": [
     "terminal",
     "shell",

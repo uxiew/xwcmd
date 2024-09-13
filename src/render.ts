@@ -23,7 +23,7 @@ export class Render {
    *
    * ```js
    *  {
-   *    Usage: ['xwcli [Flags] [command]'],
+   *    Usage: ['xwcmd [Flags] [command]'],
    *    Commands: [
    *      '-h, --help     Display help (version: 1.1.0)'
    *      'xxx'
@@ -156,7 +156,7 @@ export class Render {
    * ```sh
    * this is a description for this command. (1.1.0)
    * 
-   * Usage: xwcli [Flags] [command]
+   * Usage: xwcmd [Flags] [command]
    * 
    * Commands:
    *   help             Display help

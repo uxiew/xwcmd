@@ -1,6 +1,6 @@
-<img style="width:100vw;height:200px" src="https://cdn.jsdelivr.net/gh/uxiew/xwcli@main/xwcli.svg"/>
+<img style="width:100vw;height:200px" src="https://cdn.jsdelivr.net/gh/uxiew/xwcmd@main/xwcmd.svg"/>
 
-# xwcli
+# xwcmd
 
 Opinionated, Simple and Efficient CLI Builder. But more flexible style, happy to Use.
 
@@ -13,14 +13,14 @@ Opinionated, Simple and Efficient CLI Builder. But more flexible style, happy to
 Install:
 
 ```sh
-npm install --save xwcli
+npm install --save xwcmd
 ```
 
 using it:
 
 ```ts
 #!/usr/bin/env node
-import { define, colors } from 'xwcli';
+import { define, colors } from 'xwcmd';
 
 // describe('test cli base', () => {
 const cmd = define({
@@ -50,10 +50,10 @@ const cmd = define({
 cmd.set({
   render(i) {
     // You can design it any way you want.
-    i = i.replace('mycli', 'xwcli');
+    i = i.replace('mycli', 'xwcmd');
     return i
       .replace('Flags:', 'Options:')
-      .replace(`${colors.red('Cli')} is a fast`, 'xwcli is a fast');
+      .replace(`${colors.red('Cli')} is a fast`, 'xwcmd is a fast');
   },
   group: {
     // "Commands": ['t,todo, todo <lodash>', `todo's description`],
@@ -107,9 +107,9 @@ cmd.run();
 The following output with colors：
 
 ```sh
-xwcli is a fast JavaScript runtime, package manager, bundler, and test runner.
+xwcmd is a fast JavaScript runtime, package manager, bundler, and test runner.
 
-  Usage: xwcli [Flags] [command]
+  Usage: xwcmd [Flags] [command]
 
   Commands:
     install
@@ -143,7 +143,7 @@ Create the main Command. the `options` is a object, reference above example.
 Let me explain, for examples:
 
 ```ts
-import { colors } from 'xwcli'
+import { colors } from 'xwcmd'
 ...
  [`f,${colors.blue('files')} <value_hint> |array`, 'This is a description for files flag' , []]
 ```

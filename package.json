@@ -1,10 +1,9 @@
 {
   "name": "xwcli",
+  "version": "0.1.0",
   "description": "Opinionated, Simple and Efficient CLI Builder, happy to Use",
   "license": "MIT",
   "author": "ChandlerVer5 (https://github.com/uxiew)",
-  "main": "dist/index.mjs",
-  "type": "module",
   "repository": "https://github.com/uxiew/xwcli",
   "keywords": [
     "terminal",
@@ -18,22 +17,24 @@
     "yargs",
     "commander"
   ],
+  "type": "module",
+  "main": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
   "exports": {
     ".": {
-      "require": "./index.cjs",
-      "import": "./index.mjs"
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
     }
   },
   "scripts": {
     "test": "vitest",
     "coverage": "c8 npm test",
     "clean": "rm -rf dist",
-    "prebuild": "npm run clean",
-    "build": "sa",
+    "build": "xd --entry src -f esm --dts --clean",
     "release": "semantic-release",
     "semantic-release": "semantic-release"
   },
@@ -42,7 +43,9 @@
     "c8": "^10.1.2",
     "clet": "^1.0.1",
     "tsx": "^4.19.0",
-    "vitest": "^2.0.5"
+    "unbuild": "^2.0.0",
+    "vitest": "^2.0.5",
+    "xdw": "0.1.0-beta1"
   },
   "dependencies": {
     "minicolumns": "^1.0.1",

@@ -19,10 +19,6 @@ const cmd = define({
 })
 
 // set the render options
-// 颜色设置
-// 缩进设置
-// 背景图设置
-// 头部设置（提供选项？）
 cmd.set({
     unk: () => { },
     error: () => { },
@@ -58,14 +54,6 @@ cmd.sub(
         console.log(`install+++`, args, pkg);
     }
 );
-// .set(
-//     {
-//         Usage: [
-//             'mycli install xxxx',
-//             'mycli install <xxx>',
-//         ]
-//     }
-// )
 
 
 cmd.sub(['un,uninstall <fetchallthemeforloves>', `uninstall's description`], [

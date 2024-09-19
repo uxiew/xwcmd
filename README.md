@@ -16,119 +16,7 @@ Install:
 npm install --save xwcmd
 ```
 
-using it:
-
-```ts
-#!/usr/bin/env node
-import { define, colors } from 'xwcmd';
-
-// describe('test cli base', () => {
-const cmd = define({
-  name: 'mycli',
-  version: '1.0.1',
-  args: [
-    [
-      colors.red('t') + ',target <valueHint>',
-      `it ${colors.blue('is')} a description`,
-      'astronaut'
-    ],
-    [
-      [
-        `m,me, ${colors.blue('mean')}`,
-        'Is a mean description with `true` default value'
-      ],
-      true
-    ],
-    [`${colors.blue('files')} |array`, 'This is a desc for files']
-  ],
-  action(info) {
-    console.log(`${colors.bgBlue(colors.white('info!'))}`, info);
-  }
-});
-
-// set the render options
-cmd.set({
-  render(i) {
-    // You can design it any way you want.
-    i = i.replace('mycli', 'xwcmd');
-    return i
-      .replace('Flags:', 'Options:')
-      .replace(`${colors.red('Cli')} is a fast`, 'xwcmd is a fast');
-  },
-  group: {
-    // "Commands": ['t,todo, todo <lodash>', `todo's description`],
-    // "Flags": ['q,quit', `quit's description`],
-  },
-  tail: [
-    `(more flags in 'bun install--help', ${colors.underline(
-      'bun test --help'
-    )}, and ${colors.cyan('bun build --help')})`,
-    `\nLearn more about Bun: ${colors.blue('https://bun.sh/docs')}`,
-    `               Join our Discord community: https://bun.sh/discord`
-  ],
-  header: `${colors.red(
-    'Cli'
-  )} is a fast JavaScript runtime, package manager, bundler, and test runner.`
-});
-
-// 默认运行 install 命令
-cmd.default('i');
-
-cmd
-  .sub(
-    ['i,in, install <lodash>'],
-    [
-      [colors.bgYellow('in'), `in's description`, `in's defaultValue`],
-      ['in2', `in2's description`, `in2's defaultValue`]
-    ],
-    (aaa) => {
-      console.log(`install`, aaa);
-    }
-  )
-  .set({
-    group: {
-      Examples: 'some examples'
-    }
-  });
-
-cmd.sub(
-  ['un,uninstall', `uninstall's description`],
-  [
-    // ['testun', 'description un"', 'defaultValue'],
-  ],
-  async (un) => {
-    console.log(`uninstall`, un);
-  }
-);
-
-cmd.run();
-```
-
-The following output with colors：
-
-```sh
-xwcmd is a fast JavaScript runtime, package manager, bundler, and test runner.
-
-  Usage: xwcmd [Flags] [command]
-
-  Commands:
-    install
-    uninstall                 uninstall's description
-
-  Options:
-         -t, --target         You kan see it is a description (default: "astronaut")
-    -m, -me, --mean           Is a description
-             --list1          Thisis a desc for list1
-             --array1         array1's description,so test a long description, LOL, no other meaning (default: [])
-             --boolean1       Boolean s desc (default: false)
-             --number1        I am number1's desc (default: 0)
-         -h, --help           Print this help menu
-
-(more flags in 'bun install--help', bun test --help, and bun build --help)
-
-Learn more about Bun: https://bun.sh/docs
-               Join our Discord community: https://bun.sh/discord
-```
+usage see [test/cli.js](./test/cli.js)
 
 ## API
 
@@ -207,7 +95,7 @@ Default command parameters.
 for
 
 ```ts
-// set `execute` as the default command (`x` is a sub command alias name)
+// set `execute` as the default command (`x` is alias name)
 cmd.default('[x,execute [pkg!|array]]');
 ```
 

@@ -42,19 +42,19 @@ export class Render {
   }
 
   get type() {
-    return this.meta.type
+    return this.meta.parent?.type
   }
 
   get parent() {
-    return this.meta.parent
+    return this.meta.parent?.render
   }
 
 
-  /** 
+  /**
    * indent Level, default 2
    */
-
   constructor(readonly meta: Meta, readonly flagInfo: FormatArgs[]) {
+    console.log(`xxxxxxxxxx`, meta, flagInfo)
     this.addLine({
       group: 'Usage',
       line: this.type === 'sub'
@@ -64,20 +64,10 @@ export class Render {
   }
 
   /**
-   * calc number of spaces from the left. (for flags)
-   * 
-   * @param {string} info - this info to display
-   * @param {string} other - need exclude the other infos's length
-   */
-  private calcPadLen(needPadLen: number, innerStr: string) {
-    return needPadLen + innerStr.length - stringLen(innerStr)
-  }
-
-
-  /**
    * add Flags or Commands to output
    */
   addExtraInfo({ type, info }: { type: 'Commands' | 'Flags', info: FormatArgs[] }) {
+    console.log(`info`, info)
     let maxAliasLen = 0, padLeft = fillSpace(this.settings.indentLevel)
     this.extras[type] = info.map(([alias, flag, hint, dataType, desc, defaultValue]) => {
       const aliasFlag = alias ? alias.split(',').map(a => concatANSI(a, '-')).join(', ') : ''
@@ -148,27 +138,27 @@ export class Render {
     return this
   }
 
-  /** 
+  /**
    * show all command info on the terminal
    * * make link linkable
-   * 
+   *
    * @example
    * ```sh
    * this is a description for this command. (1.1.0)
-   * 
+   *
    * Usage: xwcmd [Flags] [command]
-   * 
+   *
    * Commands:
    *   help             Display help
-   * 
+   *
    * Flags:
-   *   --help           Output usage information
-   * -S, --sections   get epub file sections
-   *   
+   *   -S, --sections       get epub file sections
+   *       --help           Output usage information
+   *
    * Examples:
    *   Add a dependency from the npm registry
    *   bun add zod
-   * 
+   *
    * Learn more about Bun: https://bun.sh/docs
    * ```
    */

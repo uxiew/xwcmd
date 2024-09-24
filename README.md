@@ -33,7 +33,7 @@ Let me explain, for examples:
 ```ts
 import { colors } from 'xwcmd'
 ...
- [`f,${colors.blue('files')} <value_hint> |array`, 'This is a description for files flag' , []]
+ [`f,${colors.blue('...files')} <value_hint>`, 'This is a description for files flag' , []]
 ```
 
 The first parameter is a flag and it's aliases (this example is `-f`,`---files`), the second is this flag's description, and the third is the default value (this example is `[]`).
@@ -42,8 +42,11 @@ The first parameter is a flag and it's aliases (this example is `-f`,`---files`)
 
 `<value_hint>` is a hint for the value, define by `<>` parentheses. like description for the value.
 
-The `|` is a separator for the data type, `array` means the value is an array.
-The type of arg is defined by `| <datatype>` format, `<datatype>` could have those data type: `string`, `number`, `boolean`, `array`, default: `string`.
+The `...` is a separator for the data type, `...` means the value is an array.
+The type of arg is defined by prefacing it with a specific character，such as `-`,'!','...', default: `string`.
+`-` means `number` type.
+`!` means `boolean` type.
+`...` means `array` type.
 
 The type is automatically converted for you, you can also specify the default value.
 
@@ -99,6 +102,14 @@ for
 cmd.default('[x,execute [pkg!|array]]');
 ```
 
+### `call(name:string, argv: any[])`
+
+Invoke any registered subcommand
+
+```
+ cmd.call('any_subcommand', ['default_value', '--flag', 'flag_value'])
+```
+
 ### `examples()`
 
 Display examples information
@@ -119,7 +130,7 @@ Display help information
 
 - [x] more test
 - [x] value hint.
-- [x] choices.
+- [ ] choices.
 - [ ] support more colors (see `bun`).
 
 ## any problem?

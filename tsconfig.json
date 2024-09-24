@@ -1,13 +1,22 @@
 {
   "compilerOptions": {
     "strict": true,
+    "lib": [
+      "DOM",
+      "ESNext",
+    ],
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
     "esModuleInterop": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "resolveJsonModule": true,
-    "types": ["vitest/globals"]
+    "types": [
+      "vitest/globals"
+    ]
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts"
+  ]
 }

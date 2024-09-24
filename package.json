@@ -26,7 +26,7 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "default": "./dist/index.js"
     }
   },
   "scripts": {
@@ -38,12 +38,12 @@
     "semantic-release": "semantic-release"
   },
   "devDependencies": {
-    "@types/node": "^22.5.0",
+    "@types/node": "^22.5.5",
     "c8": "^10.1.2",
     "clet": "^1.0.1",
-    "tsx": "^4.19.0",
+    "tsx": "^4.19.1",
     "unbuild": "^2.0.0",
-    "vitest": "^2.0.5",
+    "vitest": "^2.1.1",
     "xdw": "0.1.0-beta1"
   },
   "dependencies": {

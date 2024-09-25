@@ -5,5 +5,3 @@ export * from "./args/types";
 export * from "./define";
 export * from "./args/parser";
 export * from "./utils";
-
-export { colors } from "./colors/picocolors";

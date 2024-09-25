@@ -1,5 +1,6 @@
 import type { MockInstance } from 'vitest';
-import { colors, type Meta } from '../src';
+import { type Meta } from '../src';
+import { colors } from '../src/colors/picocolors';
 import { Command } from '../src/command';
 import { isFlag } from '../src/utils';
 
@@ -38,34 +39,6 @@ describe('Command', () => {
       version: '1.1.1',
       parent: cmd
     });
-  });
-
-  // it('should not run display help when defaultHelp disabled', () => {
-  //   const argv = ['node', 'app'];
-  //   cmd.set({ defaultHelp: false })
-  //   cmd.run(argv);
-  //   // expect(result).toEqual(cmd.runDefault());
-  // });
-
-  it('should run version command when --version flag is present', () => {
-    const argv = ['node', 'app', '--version'];
-    const mockVersion = vi.spyOn(cmd, 'version')
-    cmd.run(argv);
-    expect(mockVersion).toHaveBeenCalledOnce()
-  });
-
-  it(`Should show help when '--help' flag is present`, () => {
-    const argv = ['node', 'app', 'xx', '-a', 'xx', '-t', 'testa', '--help'];
-    const mockHelp = vi.spyOn(cmd, 'help')
-    cmd.run(argv);
-    expect(mockHelp).toHaveBeenCalledOnce()
-  });
-
-  it('should handle flag when isFlag and not help', () => {
-    const flag = '--test';
-    const argv = ['node', 'app', flag];
-    cmd.run(argv);
-    expect(isFlag(flag)).toBe(true);
   });
 
   it('should error when invalid flag', () => {
@@ -142,3 +115,46 @@ describe('Command', () => {
   })
 
 });
+
+describe('version | help show', () => {
+  let cmd: Command
+  beforeEach(() => {
+    // 创建一个 Command 实例用于测试
+    cmd = new Command({
+      name: "test",
+      version: "1.1.1",
+      alias: [],
+      type: "main",
+      hint: '',
+    }, [
+      ['-a,arget', "arget desc", "arget default value"],
+      ['-t,test', "test desc", "test default value"]
+    ]);
+  });
+
+  // it('should not run display help when defaultHelp disabled', () => {
+  //   const argv = ['node', 'app'];
+  //   cmd.set({ defaultHelp: false })
+  //   cmd.run(argv);
+  //   // expect(result).toEqual(cmd.runDefault());
+  // });
+
+  it('should run version command when --version flag is present', () => {
+    const argv1 = ['node', 'app', '--version'];
+    const argv2 = ['node', 'app', '-v'];
+    const mockVersion = vi.spyOn(cmd, 'version')
+    cmd.run(argv1);
+    cmd.run(argv2);
+    expect(mockVersion).toHaveBeenCalledTimes(2)
+  });
+
+  it(`Should show help when '--help' flag is present`, () => {
+    const argv2 = ['node', 'app', 'xx', '-a', 'xx', '--help'];
+    const argv1 = ['node', 'app', '-h'];
+    const mockHelp = vi.spyOn(cmd, 'help')
+    cmd.run(argv1);
+    cmd.run(argv2);
+    expect(mockHelp).toHaveBeenCalledTimes(2)
+  });
+
+})

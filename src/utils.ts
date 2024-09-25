@@ -121,29 +121,38 @@ export const parseDefaultParams = (defaultFlag: string) => {
     alias: {},
     hints: {},
     required: [],
+    // collect all default args for use later
     _: [] as string[]
   }
+  // `pkg!, -n, ...files`
   const params = (defaultFlag.match(/\[([^]*)\]/)?.[1] ?? '')
   if (params.length > 0)
     params.split(',').forEach(param => {
       const p = param.trim()
       argsHandle([p, ''], result)
-      result._.push(cleanArg(p.replace(/!$/, '')))
+      result._.push(cleanArg(p))
     })
   else return
   return result
 }
 
 /**
- * remove `<xxx>`、`| xxx` and trim space
+ * remove `<xxx>`、`| xxx`,`! xxx !` and trim space,
+ * get clean flag value
  */
 export const cleanArg = (val: string) => {
-  let trimmed = val.replace(/<.*>/, '')
-    .replace(/(\[.*\])/g, (a) => a.replace(/\|/g, '#'))
-    .replace(/\|.+$/, '').replace('#', '|')
-    // relpace type sign
+  let trimmed = val
+    .replace(/<.*>/, '')
+    .replace(/(\[.*\])/g, (a) => a.replace(/\|/g, '&'))
+    // remove things like `| array`
+    .replace(/\|.+$/, '')
+    .replace('&', '|')
+    .trim()
+    //Remove leading signs `!`, `...`, and `-`
     .replace(/^(!|\.\.\.|-)/, '')
-  return trimmed.trim();
+    // remove the ending required sign `!`
+    .replace(/!$/, '')
+  return trimmed;
 }
 
 /**
@@ -165,11 +174,12 @@ export const splitFlag = (val: string) => {
 type OptionalType = 'string' | 'boolean' | 'number' | 'array'
 
 /**
- * parse flag and it's type from string like `parse | number `
+ * parse flag and it's type from string like `-parse!`,
+ * @param {String} val like `!bool! <hint>`, `!bool!`
  */
-export function parseType(value: string): [OptionalType, string] {
-  let type: OptionalType = 'string'
-  switch (value.replace(/<.*>/, '').charAt(0)) {
+export function parseType(val: string): [OptionalType, string, boolean] {
+  let type: OptionalType = 'string', required = false
+  switch (val.replace(/<.*>/, '').charAt(0)) {
     case '-':
       type = 'number'
       break;
@@ -180,7 +190,8 @@ export function parseType(value: string): [OptionalType, string] {
       type = 'array'
       break;
   }
-  return [type, cleanArg(value)]
+  if (/.+!/.test(val)) required = true
+  return [type, cleanArg(val), required]
 }
 
 /**
@@ -192,13 +203,10 @@ function argsHandle(args: Arg, options: CmdOptions) {
   const alias: string[] = []
   flagArr.forEach((f, i) => {
     const draftFlag = stripAnsi(f)
-    const flag = cleanArg(draftFlag)
+    let [type, val, required] = parseType(draftFlag);
     if (i === flagArr.length - 1) {
-      let [type, val] = parseType(draftFlag);
-      if (val.endsWith('!')) {
-        val = val.slice(0, -1)
-        options.required.push(val)
-      }
+      if (val === 're') console.log(`dd`, draftFlag, val)
+      if (required) options.required.push(val)
       options[type] ? options[type].push(val) : (options[type] = [val]);
       (options.alias || (options.alias = {}))[val] = alias
       if (typeof defaultValue !== 'undefined') {
@@ -207,7 +215,7 @@ function argsHandle(args: Arg, options: CmdOptions) {
       options.description[val] = description ?? ''
       options.hints[val] = parseByChar(draftFlag)
     } else {
-      alias.push(flag)
+      alias.push(val)
     }
   })
 }
@@ -273,6 +281,7 @@ export function formatArgs(args: Args) {
     return [alias.join(','), val, parseByChar(flag), type, ...arg]
   }) as FormatArgs[]
 }
+
 /**
  * method for render Output, fill space like indent
  */

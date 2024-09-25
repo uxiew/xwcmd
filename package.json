@@ -21,12 +21,25 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "LICENSE"
   ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./argvParser": {
+      "types": "./dist/args/parser.d.ts",
+      "default": "./dist/args/parser.js"
+    },
+    "./colors": {
+      "types": "./dist/colors/picocolors.d.ts",
+      "default": "./dist/colors/picocolors.js"
+    },
+    "./utils": {
+      "types": "./dist/utils.d.ts",
+      "default": "./dist/utils.js"
     }
   },
   "scripts": {

@@ -1,6 +1,6 @@
 import { parse } from "../src/args/parser";
-import { colors } from "../src";
-import { matchSubCmd, stringLen, parseCliArgs, cleanArg, splitFlag, parseType, parseByChar, parseDefaultParams, formatArgs } from '../src/utils'
+import { colors } from "../src/colors/picocolors";
+import { matchSubCmd, stringLen, parseCliArgs, cleanArg, splitFlag, parseType, parseByChar, parseDefaultParams, formatArgs, isFlag, isLongFlag, isShortFlag } from '../src/utils'
 import stripAnsi from "strip-ansi";
 
 // 模拟 meta 对象
@@ -63,15 +63,29 @@ describe('test all utils function', () => {
   })
 
   it('`parseType` should work correctly', () => {
-    expect(parseType("-test <hint>")).toEqual(['number', 'test']);
-    expect(parseType("!test ")).toEqual(['boolean', 'test']);
-    expect(parseType("!test ")).toEqual(['boolean', 'test']);
+    expect(parseType("-test <hint>")).toEqual(['number', 'test', false]);
+    expect(parseType("!test ")).toEqual(['boolean', 'test', false]);
+    expect(parseType("!test! ")).toEqual(['boolean', 'test', true]);
+    expect(parseType("!test! <hint>")).toEqual(['boolean', 'test', true]);
+    expect(parseType("!test!<hint>")).toEqual(['boolean', 'test', true]);
+    expect(parseType("!test5!<hint>")).toEqual(['boolean', 'test5', true]);
+
     const v1 = colors.blue('...list')
     const v2 = '...list'
 
-    expect(parseType(stripAnsi(v1))).toEqual(['array', 'list']);
-    expect(parseType(v2 + '<files>')).toEqual(['array', 'list']);
+    expect(parseType(stripAnsi(v1))).toEqual(['array', 'list', false]);
+    expect(parseType(v2 + '<files>')).toEqual(['array', 'list', false]);
   })
+
+
+  it('`isFlag` should work', () => {
+    const flag = '--test';
+    const sflag = '-t';
+    expect(isFlag(flag)).toBe(true);
+    expect(isFlag(sflag)).toBe(true);
+    expect(isLongFlag(flag)).toBe(true);
+    expect(isShortFlag(sflag)).toBe(true);
+  });
 
   it('`parseDefaultParams` should work correctly', () => {
     expect(parseDefaultParams('[pkg!, !re!, ...files]')).toEqual({
@@ -112,16 +126,18 @@ describe('test all utils function', () => {
   })
 
   it('`parseByChar` should work correctly', () => {
-    expect(parseByChar("t,te, test <hint| < xxx>> | array ")).toEqual('hint| < xxx>');
+    expect(parseByChar("t,te, ...test <hint| < xxx>>")).toEqual('hint| < xxx>');
   })
 
   it('`formatArgs` should work correctly', () => {
     expect(formatArgs([
-      [`t,te, ...${colors.yellow('test')} <hint>`, 'desc', []],
-      [`t,te, -test <hint>`, 'desc', []],
+      [`t,te, ${colors.yellow('...test')} <hint>`, 'desc', []],
+      [`x,xa, ...${colors.yellow('xaxa')} <hint>`, 'desc', []],
+      [`t,te, -test! <hint>`, 'desc', []],
       [`t,te, !${colors.yellow('test')} <hint>`, 'desc', []]
     ])).toEqual([
       ['t,te', 'test', 'hint', 'array', 'desc', []],
+      ['x,xa', 'xaxa', 'hint', 'array', 'desc', []],
       ['t,te', 'test', 'hint', 'number', 'desc', []],
       ['t,te', 'test', 'hint', 'boolean', 'desc', []]
     ]);

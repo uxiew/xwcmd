@@ -136,6 +136,19 @@ export class Command {
   }
 
   /**
+   * set default Command
+   */
+  default(cmd: string) {
+    // check `cmd`
+    if (this.type === 'main' && cmd.length > 0 && !cmd.startsWith('[')) {
+      throw new XWCMDError(`Invalid default command parameters '${cmd}' format.`)
+    }
+    // override sub default command
+    this.defaultCmd = cmd
+    return this
+  }
+
+  /**
    * invoke given any sub command
    */
   call(name: string, callArgv: any[]) {
@@ -351,8 +364,9 @@ export class Command {
 
     const [subCmd, desc = ''] = toArray(cmd)
 
-    /** `['i', 'in', 'install']` */
+    /** @example ['i', 'in', 'install'] */
     const alias = splitFlag(subCmd).map(cleanArg)
+
     // init subCommand
     this.subs.push(new Command({
       name: alias.pop()!,
@@ -368,19 +382,6 @@ export class Command {
     )
 
     return this.subs[this.subs.length - 1]
-  }
-
-  /**
-   * set default Command
-   */
-  default(cmd: string) {
-    // check `cmd`
-    if (this.type === 'main' && cmd.length > 0 && !cmd.startsWith('[')) {
-      throw new XWCMDError(`Invalid default command parameters '${cmd}' format.`)
-    }
-    // override sub default command
-    this.defaultCmd = cmd
-    return this
   }
 
 }

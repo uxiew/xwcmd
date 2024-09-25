@@ -1,5 +1,6 @@
 
-import { define, parseArgs, colors } from '../src';
+import { define, parseArgs } from '../src';
+import { colors } from '../src/colors/picocolors';
 
 
 describe('cli/define test', () => {

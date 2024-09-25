@@ -89,29 +89,30 @@ describe('Command', () => {
     expect(mockError).toHaveBeenLastCalledWith(getErrorInfo(cmd.meta, `Invalid Command 'ix'.`))
   });
 
-  it('run sub command when any command invoke call method', () => {
+  it('Run any async sub command by invoking the `call` method', async () => {
     const subCmd = cmd.sub(
-      ['i,in, install [-xxx!] <lodash>', 'install"s description'],
+      ['i,in, install [-xxx!] <lodash>', `install's description`],
       [
         ['r,!recursive', 'recursive desc', false]
       ], (a, b) => {
-        console.log(a, b);
+        console.log(`install running`, a, b);
       }).sub(
-        ['xa [-xxx!]', 'install"s description']
+        ['fetch [-xxx!]', `fetch's description`]
         , (a, b) => {
-          console.log(`xa-xaxx`, a, b);
+          console.log(`fetch running`, a, b);
+          return fetch('https://jsonplaceholder.typicode.com/todos/1')
+            .then(response => response.json())
         }).sub(
-          ['xsa [-xxx!]', 'install"s description']
+          ['xsa [-xxx!]', `xsa's description`]
           , (a, b) => {
-            console.log(`xa-xaxx`, a, b);
+            console.log(`xsa running`, a, b);
           })
 
     // no action, no real run, so no error will be triggered
     cmd.defineAction(() => { })
 
-    subCmd.call('xa', [12, 'as', 'cc'])
-
-    cmd.run(['node', 'app', 'ix']);
+    const res = await subCmd.call('fetch', [12, 'a', 'bc'])
+    expect(Object.keys(res)).toContain('userId')
   })
 
 });

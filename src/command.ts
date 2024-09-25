@@ -30,8 +30,12 @@ export class Command {
   render: Render;
   /** subCommands */
   subs: Command[] = []
-  /** process the action function */
-  private process: ((res?: Record<string, any>, resolved?: Argv) => Awaited<any>)
+  /**
+   * process the action function
+   * @param { Record<string, any> } result - default command params resovled
+   * @param { ArgvBase } resolved - argv parsed result
+   */
+  private process: ((result?: Record<string, any>, resolved?: Argv) => Awaited<unknown>)
     = () => { }
 
   /**
@@ -122,7 +126,6 @@ export class Command {
    * set action function
    */
   defineAction(action: CommandAction) {
-    // result: default command params resovled
     this.process = async (result, resolved) => {
       // remove `_`, `--` redundant keys
       if (result?._) {
@@ -130,7 +133,8 @@ export class Command {
         result = res
       }
       const parsed = resolved ?? this.parse();
-      parsed && await action(parsed, result)
+      console.log(`fetch running - process`, parsed)
+      return await action(parsed, result)
     }
     return this
   }
@@ -271,14 +275,14 @@ export class Command {
     if (!defaultResult) return
     const result = this.parse(this.options, argvs)
     if (!result) return
-    this.process(defaultResult, result)
+    return this.process(defaultResult, result)
   }
 
   /**
    * parse args and run the action, Normally no parameters are required
    * @param {Array} argv - custom process argv, default: `process.argv`
    */
-  run(argv: ProcessArgv = this.argv) {
+  async run(argv: ProcessArgv = this.argv): Promise<unknown> {
     const argv_ = argv[2]
     const showHelp = argv.includes('--help') || argv.includes('-h')
     const showVersion = argv.includes('--version') || argv.includes('-v')
@@ -308,29 +312,32 @@ export class Command {
       // else {
       //     return errorWithHelp(this.meta, `Invalid Argument '${argv_}'.`)
       // }
-
       return this.process()
     }
     // When matching the specified args
     else {
-      const isSubCmd = this.subs.some(subCmd => {
+      let subIndex: number = -1
+      const isSubCmd = this.subs.some((subCmd, i) => {
         if (matchSubCmd(subCmd.meta, argv_)) {
           // keep original process.argv
           const subArgv = [...argv]
           subArgv.splice(2, 1)
           subCmd.argv = subArgv
           if (showHelp) subCmd.help()
-          else subCmd.run()
+          else { subIndex = i }
           return true
         }
       })
 
       /** `node app subcmd x xx xxx -f xxxx` */
       /**  the `x` is not subCommand, it will be treated as a flag */
-      if (!isSubCmd) {
+      if (isSubCmd && subIndex > -1) {
+        return this.subs[subIndex].run()
+      }
+      else {
         if (showHelp) this.help()
         if (!this.defaultCmd) return errorWithHelp(this.meta, `Invalid Command '${argv_}'.`)
-        else this.runDefault()
+        else return this.runDefault()
       }
     }
   }

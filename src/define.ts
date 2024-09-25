@@ -10,13 +10,11 @@ export function runCmd(options: any, runner: () => void) {
 
 /**
  * Parses input arguments and applies defaults.
+ * @param {ProcessArgv} argv - the process argv
+ * @param {Exclude<DefineCommands['args'], undefined>} args - args,like `['a,arg <hint>','desc','default_value]`
  */
 export function parseArgs(argv: ProcessArgv, args: Exclude<DefineCommands['args'], undefined>) {
   return parse(argv.slice(2), parseCliArgs(args))
-}
-
-export function renderUsage() {
-
 }
 
 export function define(defs: DefineCommands) {
@@ -39,8 +37,4 @@ export function define(defs: DefineCommands) {
     parent: null
   }, args)
     .defineAction(action)
-}
-
-export function defineCommand(defs: DefineCommands) {
-  //
 }

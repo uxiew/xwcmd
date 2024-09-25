@@ -205,7 +205,6 @@ function argsHandle(args: Arg, options: CmdOptions) {
     const draftFlag = stripAnsi(f)
     let [type, val, required] = parseType(draftFlag);
     if (i === flagArr.length - 1) {
-      if (val === 're') console.log(`dd`, draftFlag, val)
       if (required) options.required.push(val)
       options[type] ? options[type].push(val) : (options[type] = [val]);
       (options.alias || (options.alias = {}))[val] = alias

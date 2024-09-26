@@ -46,6 +46,7 @@
     "test": "vitest",
     "coverage": "npx c8 npm test",
     "clean": "rm -rf dist",
+    "build": "nr prepublishOnly",
     "prepublishOnly": "xd --entry src -f esm --dts --clean"
   },
   "devDependencies": {

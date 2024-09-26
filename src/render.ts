@@ -67,7 +67,6 @@ export class Render {
    * add Flags or Commands to output
    */
   addExtraInfo({ type, info }: { type: 'Commands' | 'Flags', info: FormatArgs[] }) {
-    console.log(`info`, info)
     let maxAliasLen = 0, padLeft = fillSpace(this.settings.indentLevel)
     this.extras[type] = info.map(([alias, flag, hint, dataType, desc, defaultValue]) => {
       const aliasFlag = alias ? alias.split(',').map(a => concatANSI(a, '-')).join(', ') : ''

@@ -17,9 +17,6 @@ describe('Command', () => {
     cmd = new Command({
       name: "test",
       version: "1.1.1",
-      alias: [],
-      type: "main",
-      hint: '',
     }, [
       ['-a,arget', "arget desc", "arget default value"],
       ['-t,test', "test desc", "test default value"]
@@ -36,6 +33,7 @@ describe('Command', () => {
       alias: ['i', 'in'],
       hint: 'lodash',
       description: 'desc',
+      default: '',
       version: '1.1.1',
       parent: cmd
     });

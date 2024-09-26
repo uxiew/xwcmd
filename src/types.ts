@@ -80,11 +80,14 @@ export interface Settings extends Partial<RenderSettings> {
 export interface Meta {
   /** command name */
   name: string
+  /** command version */
   version?: string
   type?: 'main' | 'sub'
   description?: string
-  alias?: string[]
+  /** defualt command arguments */
+  default?: string
   hint?: string
+  alias?: string[]
   /** parent Render */
   parent?: Command | null
   /** command type */

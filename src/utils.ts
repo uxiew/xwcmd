@@ -1,7 +1,13 @@
+import stripAnsi from "strip-ansi";
+import { parse } from "./args/parser";
 import { type Command } from "./command";
 import { XWCMDError } from "./error";
-import type { Arg, Args, CmdOptions, FormatArgs, Meta, ProcessArgv, Resolvable } from "./types";
-import stripAnsi from "strip-ansi";
+import type {
+  Arg, Args,
+  CmdOptions, DefineCommands,
+  FormatArgs, Meta, ProcessArgv,
+  Resolvable
+} from "./types";
 
 export const FLAG_STR = '--'
 export const DEFAULT_STR = '__'
@@ -98,7 +104,7 @@ export const toArray = (val: any | any[]) => Array.isArray(val) ? val : [val]
  *   ' <axx|c> ' -> 'axx|c'
  * ```
  */
-export const parseByChar = (val: string, symbols = ['<', '>']) => val.match(new RegExp(symbols[0] + '([^]*)' + symbols[1]))?.[1] ?? ''
+export const parseByChar = (val: string, symbols = ['<', '>']) => val.match(new RegExp(`\\${symbols[0]}([^]*)\\${symbols[1]}`))?.[1] ?? ''
 
 /**
  * Parse command-line arguments.
@@ -339,4 +345,13 @@ export function concatANSI(str: string, insertStr: string) {
 
 export function resolveValue<T>(input: Resolvable<T>): T | Promise<T> {
   return typeof input === "function" ? (input as any)() : input;
+}
+
+/**
+ * Parses input arguments and applies defaults.
+ * @param {ProcessArgv} argv - the process argv
+ * @param {Exclude<DefineCommands['args'], undefined>} args - args,like `['a,arg <hint>','desc','default_value]`
+ */
+export function parseArgs(argv: ProcessArgv, args: Exclude<DefineCommands['args'], undefined>) {
+  return parse(argv.slice(2), parseCliArgs(args))
 }

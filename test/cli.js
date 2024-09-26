@@ -1,4 +1,5 @@
-import { define, colors } from '../dist/index.js';
+import { define } from '../dist/index';
+import { colors } from '../dist/colors/picocolors';
 
 const cmd = define({
   name: 'mycli',
@@ -40,12 +41,12 @@ cmd.examples([
 ])
 
 // 默认运行 install 命令
-cmd.default('[...pkg!,!boolean!,-ss!]');
+cmd.default('[...pkg!, !boolean!, -ss!]');
 
 cmd.sub(
   ['i,in, install [pkg] <lodash, axios, react>'],
   [
-    [`${colors.bgYellow('+in')} `, `in's description`, 19],
+    [`${colors.bgYellow('-in')} `, `in's description`, 19],
     ['in2', `in2's description`, `in2's defaultValue`],
     ['r,!recursive ', `in2's description`, `in2's defaultValue`]
   ],

@@ -86,6 +86,7 @@ export class Command {
       type: 'main',
       version: '',
       description: '',
+      default: '',
       alias: [],
       hint: '',
       parent: null,
@@ -93,10 +94,11 @@ export class Command {
     }
     this.options = parseCliArgs(cliArgs)
     this.formatArgs = formatArgs(cliArgs)
-    this.render = new Render(meta, this.formatArgs)
+    this.render = new Render(this.meta, this.formatArgs)
     this.set({
-      header: meta.description,
+      header: this.meta.description,
     })
+    this.default(this.meta.default!)
   }
 
   static create(meta: Meta, flags: Args = []) {
@@ -133,7 +135,6 @@ export class Command {
         result = res
       }
       const parsed = resolved ?? this.parse();
-      console.log(`fetch running - process`, parsed)
       return await action(parsed, result)
     }
     return this
@@ -144,8 +145,8 @@ export class Command {
    */
   default(cmd: string) {
     // check `cmd`
-    if (this.type === 'main' && cmd.length > 0 && !cmd.startsWith('[')) {
-      throw new XWCMDError(`Invalid default command parameters '${cmd}' format.`)
+    if (cmd && cmd.length > 0 && !cmd.startsWith('[')) {
+      throw new XWCMDError(`Invalid default command arguments '${cmd}' format.`)
     }
     // override sub default command
     this.defaultCmd = cmd
@@ -255,7 +256,6 @@ export class Command {
       if (i > 0 && i % 2 === 0) {
         const isF = isFlag(_argv[i])
         const param = params._[n]
-        // console.log(i, arg, n, params._[n], isF);
         if (param && !isF) {
           _argv.splice(i, 0, FLAG_STR + params._[n])
           n++
@@ -287,7 +287,7 @@ export class Command {
     const showHelp = argv.includes('--help') || argv.includes('-h')
     const showVersion = argv.includes('--version') || argv.includes('-v')
     // TODO check required args
-    if (!argv_) this.help()
+    if (!argv_) return this.help()
     if (isFlag(argv_)) {
       if (showHelp) return this.help()
       if (showVersion) return this.version()
@@ -323,19 +323,20 @@ export class Command {
           const subArgv = [...argv]
           subArgv.splice(2, 1)
           subCmd.argv = subArgv
-          if (showHelp) subCmd.help()
-          else { subIndex = i }
+          subIndex = i
           return true
         }
       })
 
+      if (isSubCmd) {
+        const cmd = this.subs[subIndex]
+        if (showHelp) return cmd.help()
+        return cmd.run()
+      }
       /** `node app subcmd x xx xxx -f xxxx` */
       /**  the `x` is not subCommand, it will be treated as a flag */
-      if (isSubCmd && subIndex > -1) {
-        return this.subs[subIndex].run()
-      }
       else {
-        if (showHelp) this.help()
+        if (showHelp) return this.help()
         if (!this.defaultCmd) return errorWithHelp(this.meta, `Invalid Command '${argv_}'.`)
         else return this.runDefault()
       }
@@ -373,11 +374,12 @@ export class Command {
 
     /** @example ['i', 'in', 'install'] */
     const alias = splitFlag(subCmd).map(cleanArg)
-
+    const defaultArg = parseByChar(subCmd, ['\[', '\]'])
     // init subCommand
     this.subs.push(new Command({
       name: alias.pop()!,
       version: this.meta.version,
+      default: defaultArg ? `[${defaultArg}]` : '',
       type: 'sub',
       alias: alias,
       description: desc,
@@ -385,7 +387,6 @@ export class Command {
       parent: this,
     }, args)
       .defineAction(action)
-      .default(subCmd)
     )
 
     return this.subs[this.subs.length - 1]

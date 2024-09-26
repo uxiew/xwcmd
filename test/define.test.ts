@@ -21,6 +21,7 @@ describe('cli/define test', () => {
       version: '1.1.1',
       type: 'main',
       description: 'a cli desc',
+      default: '',
       hint: '',
       alias: [],
       parent: null

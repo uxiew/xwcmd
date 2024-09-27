@@ -50,19 +50,7 @@ export function isLongFlag(str: string): boolean {
  * @returns {string}
  */
 export function toKebabCase(str: string): string {
-
   return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-}
-/**
- * Check that the required arg is passed in
- */
-export function checkRequired(options: CmdOptions, args: ProcessArgv) {
-  args.some((a) => {
-    if (options.alias && options.alias[a]) return true
-  })
-  // if (required.length > 0) {
-  //     throw new XWCMDError(`The required args is missing: ${required.join(',')}`)
-  // }
 }
 
 /**
@@ -121,7 +109,7 @@ export const parseByChar = (val: string, symbols = ['<', '>']) => val.match(new 
  *   }
  * ```
  */
-export const parseDefaultParams = (defaultFlag: string) => {
+export const parseDefaultArgs = (defaultFlag: string) => {
   const result = {
     description: {},
     alias: {},
@@ -319,19 +307,30 @@ export function getMainCmd(cmd: Command) {
 }
 
 /**
- * test a text is a link
+ * Gets the appropriate subcommand args,
+ * if not found, return `false`.
+ * @param {String} name - sub command' name
+ * @param {Command[]} subCmds - subs commands
+ * @param {String[]} argv - command argv, relative argv path.
  */
-export function traverseToCall(name: string, subCmds: Command[], argv: string[] = []) {
-  const matched = subCmds.some(({ meta, subs }) => {
-    argv.push(meta.name)
-    if (matchSubCmd(meta, name)) {
-      return true
+export function getSubCmd(name: string, subCmds: Command[], argv: string[] = []) {
+  const cmdInfo: { cmd: Command | null, argv: string[] } = {
+    cmd: null,
+    argv: [],
+  }
+  for (const cmd of subCmds) {
+    cmdInfo.argv.push(cmd.meta.name)
+    if (matchSubCmd(cmd.meta, name)) {
+      cmdInfo.cmd = cmd
+      return cmdInfo
     } else {
-      return traverseToCall(name, subs, argv)
+      const sub = getSubCmd(name, cmd.subs)
+      cmdInfo.cmd = sub.cmd
+      cmdInfo.argv.push(...sub.argv)
+      return cmdInfo
     }
-  })
-  if (!matched) return false
-  return argv
+  }
+  return cmdInfo
 }
 
 

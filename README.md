@@ -20,8 +20,6 @@ usage see [test/cli.js](./test/cli.js)
 
 ## API
 
-process argv parser base on [ofi](https://github.com/mrozio13pl/ofi).
-
 ### `define(options)`
 
 Create the main Command. the `options` is a object, reference above example.
@@ -63,8 +61,7 @@ The name of the command.
 The version of the command.
 
 ### `sub(subCommandMeta, args, action)`
-
-Add a new sub-command to the CLI.
+Add a sub-command.
 
 ```ts
 cmd.sub(
@@ -95,28 +92,21 @@ Set configuration options
 
 Default command parameters.
 
-for
-
 ```ts
-// set `execute` as the default command (`x` is alias name)
-cmd.default('[x,execute [pkg!|array]]');
+cmd.default('[...pkg!]');
 ```
 
 ### `call(name:string, argv: any[])`
 
-Invoke any registered subcommand
+Invoke any registered subcommand.
 
 ```
- cmd.call('any_subcommand', ['default_value', '--flag', 'flag_value'])
+ cmd.call('any_subcommand', ['default_arg_value', '--flag', 'flag_value'])
 ```
 
 ### `examples()`
 
 Display examples information
-
-### `run()`
-
-last moust call `run` method to run the cli.
 
 ### `version()`
 
@@ -125,6 +115,9 @@ Display version information
 ### `help()`
 
 Display help information
+
+### `run()`
+Finally we need to call it
 
 ## TODO
 

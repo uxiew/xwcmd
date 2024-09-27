@@ -21,8 +21,9 @@ const cmd = define({
 
 // set the render options
 cmd.set({
-  unk: () => { },
+  unknownArgsError: () => { },
   error: () => { },
+  // help: false,
   tail: [`(more flags in 'bun install --help', ${colors.underline('bun test --help')}, and ${colors.cyan('bun build --help')})`,
   `\nLearn more about Bun: ${colors.blue('https://bun.sh/docs')}`,
     `               Join our Discord community: https://bun.sh/discord`],
@@ -56,11 +57,11 @@ cmd.sub(
 );
 
 
-cmd.sub(['un,uninstall <fetchallthemeforloves>', `uninstall's description`], [
+cmd.sub(['un,uninstall <fetch_all_theme_for_love>', `uninstall's description`], [
   // ['testun', 'description un"', 'defaultValue'],
 ], async (un) => {
   console.log(`uninstall++++`, un);
 })
 
 
-cmd.run()
+cmd.on()

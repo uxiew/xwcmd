@@ -1,6 +1,6 @@
 import { parse } from "../src/args/parser";
 import { colors } from "../src/colors/picocolors";
-import { matchSubCmd, stringLen, parseCliArgs, cleanArg, splitFlag, parseType, parseByChar, parseDefaultParams, formatArgs, isFlag, isLongFlag, isShortFlag } from '../src/utils'
+import { matchSubCmd, stringLen, parseCliArgs, cleanArg, splitFlag, parseType, parseByChar, parseDefaultArgs, formatArgs, isFlag, isLongFlag, isShortFlag } from '../src/utils'
 import stripAnsi from "strip-ansi";
 
 // 模拟 meta 对象
@@ -87,8 +87,8 @@ describe('test all utils function', () => {
     expect(isShortFlag(sflag)).toBe(true);
   });
 
-  it('`parseDefaultParams` should work correctly', () => {
-    expect(parseDefaultParams('[pkg!, !re!, ...files]')).toEqual({
+  it('`parseDefaultArgs` should work correctly', () => {
+    expect(parseDefaultArgs('[pkg!, !re!, ...files]')).toEqual({
       "_": [
         "pkg",
         "re",

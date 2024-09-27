@@ -21,9 +21,8 @@ describe('test default command', () => {
     const subCmd = cmd.sub(['i,in, install <lodash>'], () => {
       console.log('install action run');
     })
-    const argv = ['node', 'app', 'i', '--help'];
+    const argv = ['i', '--help'];
     const mockHelp = vi.spyOn(subCmd, 'help')
-    console.log(argv, 'fffff')
     cmd.run(argv);
     expect(mockHelp).toHaveBeenCalledOnce()
   });
@@ -55,7 +54,7 @@ describe('test default command', () => {
       });
     })
 
-    cmd.argv = ['node', 'app', 'xxx', 'a.ts', 'a.js', 'b.js', 'c.js', 'd.js'];
+    cmd.argv = ['xxx', 'a.ts', 'a.js', 'b.js', 'c.js', 'd.js'];
     cmd.run();
   });
 
@@ -80,8 +79,7 @@ describe('test default command', () => {
         })
       })
 
-    cmd.argv = ['node', 'app', '-r'];
-    cmd.run();
+    cmd.run(['-r']);
   });
 
   it('[2] sub default command should work correctly', () => {
@@ -107,7 +105,7 @@ describe('test default command', () => {
         })
       })
 
-    const argv = ['node', 'app', 'i', 'axios', 'f1', 'f2', '-r', '--flag', 'true', '-n', 'xxx'];
+    const argv = ['i', 'axios', 'f1', 'f2', '-r', '--flag', 'true', '-n', 'xxx'];
     cmd.run(argv);
   });
 
@@ -133,7 +131,7 @@ describe('test default command', () => {
         })
       })
 
-    const argv = ['node', 'app', 'i', 'axios', 'x', 'f1', 'f2', '-r', '--flag', "test", '-n', 'xxx'];
+    const argv = ['i', 'axios', 'x', 'f1', 'f2', '-r', '--flag', "test", '-n', 'xxx'];
     cmd.run(argv);
   });
 
@@ -164,7 +162,7 @@ describe('test default command', () => {
       console.log('run action run', a);
     })
 
-    cmd.argv = ['node', 'app', 'in', '-r', 'axios', 'f1', 'f2', '--flag', "test", '-n', 'xxx'];
-    cmd.run();
+    // cmd.argv = ['node', 'app', 'in', '-r', 'axios', 'f1', 'f2', '--flag', "test", '-n', 'xxx'];
+    cmd.run(['node', 'app', 'in', '-r', 'axios', 'f1', 'f2', '--flag', "test", '-n', 'xxx']);
   });
 })

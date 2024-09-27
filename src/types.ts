@@ -93,6 +93,7 @@ export interface Meta {
   /** command type */
 }
 
+export type RequiredMeta = Required<Meta>
 export type DefineMeta = Omit<Meta, 'alias' | 'hint' | 'type' | 'parent'>
 
 export interface DefineCommands extends DefineMeta {

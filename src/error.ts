@@ -15,7 +15,6 @@ export function log(type = '', ...message: any[]) {
   print(colors.cyan('[XWCMD]: ' + type) + ' '), message.forEach((m) => print(m))
 }
 
-
 export function errorWithHelp(meta: Meta, message: string) {
   console.error(colors.red(meta.name + `: ${message} For help, run command with '--help'.`))
 }

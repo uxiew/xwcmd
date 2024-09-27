@@ -46,7 +46,7 @@ describe('Command', () => {
     // must defineAction
     cmd.defineAction(() => {
 
-    }).run();
+    }).on();
 
     expect(mockError).toBeCalledTimes(1)
     expect(mockError).toHaveLastReturnedWith(getErrorInfo(cmd.meta, `Invalid Argument '${invalidFlag}'.`))
@@ -63,8 +63,7 @@ describe('Command', () => {
 
     vi.spyOn(subCmd, 'run'); // 将subCmd.run设置为一个spy
 
-    cmd.argv = ['node', 'app', 's', '-o', 'xs'];
-    cmd.run();
+    cmd.run(['s', '-o', 'xs']);
     expect(subCmd.run).toHaveBeenCalledTimes(1);
   });
 
@@ -78,10 +77,9 @@ describe('Command', () => {
         console.log(a, b);
       })
     // const argv = ['node', 'app', 'ix'];
-    cmd.argv = ['node', 'app', 'ix'];
     // no action, no real run, so no error will be triggered
     cmd.defineAction(() => { })
-    cmd.run();
+    cmd.run(['ix']);
 
     expect(mockError).toHaveBeenCalledTimes(1);
     expect(mockError).toHaveBeenLastCalledWith(getErrorInfo(cmd.meta, `Invalid Command 'ix'.`))
@@ -95,13 +93,13 @@ describe('Command', () => {
       ], (a, b) => {
         console.log(`install running`, a, b);
       }).sub(
-        ['fetch [-xxx!]', `fetch's description`]
+        ['fetch [-id!]', `fetch's description`]
         , (a, b) => {
           console.log(`fetch running`, a, b);
-          return fetch('https://jsonplaceholder.typicode.com/todos/1')
+          return fetch(`https://jsonplaceholder.typicode.com/todos/${b.id}`)
             .then(response => response.json())
         }).sub(
-          ['xsa [-xxx!]', `xsa's description`]
+          ['xa [-xxx!]', `xsa's description`]
           , (a, b) => {
             console.log(`xsa running`, a, b);
           })
@@ -109,7 +107,8 @@ describe('Command', () => {
     // no action, no real run, so no error will be triggered
     cmd.defineAction(() => { })
 
-    const res = await subCmd.call('fetch', [12, 'a', 'bc'])
+    const res = await subCmd.call('fetch', ['12', 'a', 'bc'])
+    console.log(`result: `, res)
     expect(Object.keys(res)).toContain('userId')
   })
 
@@ -139,8 +138,8 @@ describe('version | help show', () => {
   // });
 
   it('should run version command when --version flag is present', () => {
-    const argv1 = ['node', 'app', '--version'];
-    const argv2 = ['node', 'app', '-v'];
+    const argv1 = ['--version'];
+    const argv2 = ['-v'];
     const mockVersion = vi.spyOn(cmd, 'version')
     cmd.run(argv1);
     cmd.run(argv2);
@@ -148,8 +147,8 @@ describe('version | help show', () => {
   });
 
   it(`Should show help when '--help' flag is present`, () => {
-    const argv2 = ['node', 'app', 'xx', '-a', 'xx', '--help'];
-    const argv1 = ['node', 'app', '-h'];
+    const argv2 = ['xx', '-a', 'xx', '--help'];
+    const argv1 = ['-h'];
     const mockHelp = vi.spyOn(cmd, 'help')
     cmd.run(argv1);
     cmd.run(argv2);

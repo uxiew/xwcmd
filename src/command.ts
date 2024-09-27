@@ -3,21 +3,19 @@ import type { ArgsOptions, Argv } from "./args/types";
 import process from "node:process";
 import { Render } from "./render";
 import {
-  cleanArg, parseCliArgs, isFlag, matchSubCmd, splitFlag,
-  parseByChar,
-  formatArgs,
-  toArray,
-  print,
-  checkRequired,
-  FLAG_STR,
-  parseDefaultParams,
-  stripFlag,
-  toCamelCase,
-  traverseToCall,
-  getMainCmd,
+  FLAG_STR, print, toArray, toCamelCase,
+  cleanArg, parseCliArgs,
+  isFlag, matchSubCmd, splitFlag,
+  parseByChar, formatArgs,
+  parseDefaultArgs, stripFlag,
+  getSubCmd, getMainCmd,
 } from "./utils";
 import { XWCMDError, errorWithHelp, log } from "./error";
-import type { Args, CmdOptions, ProcessArgv, CommandAction, FormatArgs, Meta, Settings, SubCmd, Awaitable } from "./types";
+import type {
+  Args, CmdOptions, ProcessArgv,
+  CommandAction, FormatArgs, Meta,
+  RequiredMeta, Settings, SubCmd, Awaitable
+} from "./types";
 import { colors } from "./colors/picocolors";
 import stripAnsi from "strip-ansi";
 
@@ -46,9 +44,9 @@ export class Command {
    *
    * ```json
    * [
-   *  '/node-versions/vx.x.x/bin/node',
-   *  '/Projects/x/cli.js',
-   *  'subCmd', // if this `subCmd` is subCommand's name , it will be removed
+   *  '/node-versions/vx.x.x/bin/node', // subCmd will remove this item
+   *  '/Projects/x/cli.js', // subCmd will remove this item
+   *  'subCmd', // subCmd will remove this item
    *  '-h'
    * ]
    * ```
@@ -94,7 +92,7 @@ export class Command {
     }
     this.options = parseCliArgs(cliArgs)
     this.formatArgs = formatArgs(cliArgs)
-    this.render = new Render(this.meta, this.formatArgs)
+    this.render = new Render(this.meta as RequiredMeta, this.formatArgs)
     this.set({
       header: this.meta.description,
     })
@@ -121,7 +119,7 @@ export class Command {
       }
     }
 
-    return parse(argv.slice(2), Object.assign(defaultOptions, options))
+    return parse(argv, Object.assign(defaultOptions, options))
   }
 
   /**
@@ -156,13 +154,13 @@ export class Command {
   /**
    * invoke given any sub command
    */
-  call(name: string, callArgv: any[]) {
+  call(cmdName: string, callArgv: any[]) {
     const mainCmd = getMainCmd(this)
-    const argv = traverseToCall(name, mainCmd.subs, [])
-    if (argv === false) {
-      throw new XWCMDError(`No '${name}' sub command found!`)
+    const sub = getSubCmd(cmdName, mainCmd.subs, [])
+    if (sub.cmd === null) {
+      throw new XWCMDError(`No '${cmdName}' sub command found!`)
     }
-    return mainCmd.run(['_', '_', ...argv, ...callArgv].map(s => String(s)))
+    return sub.cmd.run(callArgv)
   }
 
   /**
@@ -197,15 +195,16 @@ export class Command {
    * print the help info
    */
   help() {
-    // TODO fix default command Usage
-    // add subCommand's info
     // [subCmdName, parseByChar(subCmd), desc]
     this.render.addExtraInfo({
       type: 'Commands',
       info: this.subs.map(({ meta: { name: cmdName, description = '', hint = '' } }) => ['', cmdName, hint, 'string', description])
     })
-    // display the help
-    return this.render.display()
+    // TODO for all commands, display the help
+    if (getMainCmd(this).render.settings.help) this.render.display()
+    else {
+
+    }
   }
 
   /**
@@ -235,25 +234,24 @@ export class Command {
    *  npm i xxxx
    * ```
    */
-  private runDefault() {
-    const params = parseDefaultParams(this.defaultCmd)
+  private runDefault(args = this.argv) {
+    const params = parseDefaultArgs(this.defaultCmd)
     if (!params) return this.process()
     // if (!params) return errorWithHelp(this.meta, `Invalid Command ${colors.underline(flag)}.`)
     //  insert default params to capture the user input to the specific flag
 
-    let flagIndex = this.argv.findIndex((v) => isFlag(v)),
+    let flagIndex = args.findIndex((v) => isFlag(v)),
       n = 0, pL = params._.length,
-      _argv = this.argv.slice(0, flagIndex < 0 ? undefined : flagIndex);
+      _argv = args.slice(0, flagIndex < 0 ? undefined : flagIndex);
 
-    if (_argv.length >= 2 + pL) {
-      // last one is not array，slice `_argv`
+    if (_argv.length >= pL) {
+      // `params._`'s last one is not array，slice `_argv`
       if (!params.array?.includes(params._[pL - 1])) {
-        _argv = _argv.slice(0, 2 + pL)
+        _argv = _argv.slice(0, pL)
       }
     }
     for (let i = 0; i < _argv.length; i++) {
-      // if (!isFlag(arg)) defaultArgv = _argv.slice(0, i)
-      if (i > 0 && i % 2 === 0) {
+      if (i % 2 === 0) {
         const isF = isFlag(_argv[i])
         const param = params._[n]
         if (param && !isF) {
@@ -265,11 +263,13 @@ export class Command {
 
     // check required param
     params.required.every((r) => {
-      if (!_argv.includes(FLAG_STR + r, 2)) throw new XWCMDError(`Missing required parameter '${colors.underline(r)}'!`)
+      if (!_argv.includes(FLAG_STR + r))
+        throw new XWCMDError(`Missing required parameter '${colors.underline(r)}'!`)
     })
 
-    const argvs = this.argv.slice(0)
-    argvs.splice(2, this.argv.findIndex((v) => v === _argv[_argv.length - 1]) - 1)
+    const argvs = args.slice(
+      args.findIndex((v) => v === _argv[_argv.length - 1]) + 1
+    )
 
     const defaultResult = this.parse(params, _argv)
     if (!defaultResult) return
@@ -278,16 +278,22 @@ export class Command {
     return this.process(defaultResult, result)
   }
 
+  on() {
+    this.argv = this.argv.slice(2)
+    this.run()
+  }
+
   /**
    * parse args and run the action, Normally no parameters are required
-   * @param {Array} argv - custom process argv, default: `process.argv`
+   * @param {Array<String>} argv - custom process argv, default: `process.argv.slice(2)`
    */
   async run(argv: ProcessArgv = this.argv): Promise<unknown> {
-    const argv_ = argv[2]
+    const argv_ = argv[0]
     const showHelp = argv.includes('--help') || argv.includes('-h')
     const showVersion = argv.includes('--version') || argv.includes('-v')
     // TODO check required args
     if (!argv_) return this.help()
+    // if ()
     if (isFlag(argv_)) {
       if (showHelp) return this.help()
       if (showVersion) return this.version()
@@ -305,31 +311,19 @@ export class Command {
       if (isCmdFlag) {
         // like `npm -D install tsx`, Move boolean/undefined value to the end, need check all commands flag include sub commands.
         if (this.options.boolean?.includes(cmdFlag)) {
-          argv.push(argv.splice(2, 1)[0])
+          // move first arg to the end
+          argv.push(argv.splice(0, 1)[0])
           return this.run(argv)
         }
       }
-      // else {
-      //     return errorWithHelp(this.meta, `Invalid Argument '${argv_}'.`)
-      // }
       return this.process()
     }
     // When matching the specified args
     else {
-      let subIndex: number = -1
-      const isSubCmd = this.subs.some((subCmd, i) => {
-        if (matchSubCmd(subCmd.meta, argv_)) {
-          // keep original process.argv
-          const subArgv = [...argv]
-          subArgv.splice(2, 1)
-          subCmd.argv = subArgv
-          subIndex = i
-          return true
-        }
-      })
-
-      if (isSubCmd) {
-        const cmd = this.subs[subIndex]
+      const [cmd] = this.subs.filter((subCmd, i) => matchSubCmd(subCmd.meta, argv_))
+      if (cmd) {
+        // keep original process.argv
+        cmd.argv = argv.slice(1)
         if (showHelp) return cmd.help()
         return cmd.run()
       }
@@ -338,7 +332,7 @@ export class Command {
       else {
         if (showHelp) return this.help()
         if (!this.defaultCmd) return errorWithHelp(this.meta, `Invalid Command '${argv_}'.`)
-        else return this.runDefault()
+        else return this.runDefault(argv)
       }
     }
   }

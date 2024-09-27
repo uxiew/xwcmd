@@ -2,6 +2,13 @@ import { Command } from "./command";
 import type { DefineCommands } from "./types";
 import { XWCMDError } from "./error";
 
+/**
+ * render output
+ */
+
+/**
+ * define command
+ */
 export function define(defs: DefineCommands) {
   // validate defs
   const { name, args = [], action,

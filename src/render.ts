@@ -1,10 +1,11 @@
 import { row, type ColumnOptions } from "minicolumns";
 import { colors } from "./colors/picocolors";
-import { concatANSI, fillSpace, print, stringLen, toArray } from "./utils";
+import { cleanArg, concatANSI, fillSpace, parseByChar, print, stringLen, toArray } from "./utils";
 import type {
-  Meta, RenderSettings, Settings,
+  RenderSettings, Settings,
   Output, FormatArgs,
-  SettingGroup
+  SettingGroup,
+  RequiredMeta
 } from "./types";
 
 export class Render {
@@ -53,13 +54,18 @@ export class Render {
   /**
    * indent Level, default 2
    */
-  constructor(readonly meta: Meta, readonly flagInfo: FormatArgs[]) {
-    console.log(`xxxxxxxxxx`, meta, flagInfo)
+  constructor(readonly meta: RequiredMeta, readonly flagInfo: FormatArgs[]) {
+    this.addUsageInfo(meta)
+  }
+
+  addUsageInfo(meta: RequiredMeta) {
+    const { parent: cmd, name, default: defaultArgs } = meta
+    // console.log(`addUsageInfo---`, Array.from(parseByChar(defaultArgs, ['[', ']']).split(',')))
     this.addLine({
       group: 'Usage',
       line: this.type === 'sub'
-        ? colors.yellow(this.meta.parent?.meta.name + ' ' + this.meta.name) + colors.gray(' [Flags] [...args]')
-        : colors.yellow(this.meta.name) + colors.gray(' <command> [...flags] [...args]')
+        ? colors.yellow(cmd?.meta.name + ' ' + name) + colors.gray(' [Flags] [...args]')
+        : colors.yellow(name) + colors.gray(' <command> [...flags] [...args]')
     });
   }
 
@@ -171,7 +177,6 @@ export class Render {
     const format: (r: string[][], o?: FormatOptions) => [string[][], FormatOptions]
       = (row, opt = { separator: '' }) => [row.map(a => (a.unshift(padLeft), a)), opt];
 
-    // Current command is 'sub2', its alias is 's2', and hint is the content after '<'
     if (this.settings.help) this.addHelp()
     this.addExtraInfo({ type: 'Flags', info: this.flagInfo })
 

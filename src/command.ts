@@ -8,17 +8,16 @@ import {
   isFlag, matchSubCmd, splitFlag,
   parseByChar, formatArgs,
   parseDefaultArgs, stripFlag,
-  getSubCmd, getMainCmd,
+  resolveSubCmd, resolveMainCmd,
 } from "./utils";
 import { XWCMDError, errorWithHelp, log } from "./error";
 import type {
   Args, CmdOptions, ProcessArgv,
   CommandAction, FormatArgs, Meta,
-  RequiredMeta, Settings, SubCmd, Awaitable
+  RequiredMeta, Settings, SubCmd, Awaitable,
+  DefaultArgs
 } from "./types";
-import { colors } from "./colors/picocolors";
 import stripAnsi from "strip-ansi";
-
 
 /**
  * manager all command
@@ -53,11 +52,6 @@ export class Command {
    */
   argv: ProcessArgv = process.argv
 
-  /**
-   * default command name, or it's alias name
-  */
-  defaultCmd: string = ''
-
   /** Options for parsing given arguments. */
   private options: CmdOptions
   /**
@@ -72,9 +66,14 @@ export class Command {
    */
   formatArgs: FormatArgs[]
 
+  get main() {
+    return resolveMainCmd(this)
+  }
+
   get name() {
     return this.meta.name
   }
+
   get type() {
     return this.meta.type
   }
@@ -84,7 +83,6 @@ export class Command {
       type: 'main',
       version: '',
       description: '',
-      default: '',
       alias: [],
       hint: '',
       parent: null,
@@ -93,10 +91,6 @@ export class Command {
     this.options = parseCliArgs(cliArgs)
     this.formatArgs = formatArgs(cliArgs)
     this.render = new Render(this.meta as RequiredMeta, this.formatArgs)
-    this.set({
-      header: this.meta.description,
-    })
-    this.default(this.meta.default!)
   }
 
   static create(meta: Meta, flags: Args = []) {
@@ -139,26 +133,32 @@ export class Command {
   }
 
   /**
-   * set default Command
+   * set default command arguments
+   *  @param {DefaultArgs} arg - command arguments
    */
-  default(cmd: string) {
-    // check `cmd`
-    if (cmd && cmd.length > 0 && !cmd.startsWith('[')) {
-      throw new XWCMDError(`Invalid default command arguments '${cmd}' format.`)
+  default(...arg: DefaultArgs) {
+    // check `arg`
+    if (arg.some((a) => !Array.isArray(a))) {
+      throw new XWCMDError(`Invalid default command arguments '${arg}' format.`)
     }
-    // override sub default command
-    this.defaultCmd = cmd
+    this.meta.default = arg
+    this.render.setUsage(this.meta as RequiredMeta)
+    this.render.setArgument(arg)
     return this
+  }
+
+  resolveMainCmd() {
+    resolveMainCmd
   }
 
   /**
    * invoke given any sub command
+   * @param { String } name - command's name
    */
-  call(cmdName: string, callArgv: any[]) {
-    const mainCmd = getMainCmd(this)
-    const sub = getSubCmd(cmdName, mainCmd.subs, [])
+  call(name: string, callArgv: any[]) {
+    const sub = resolveSubCmd(this, name)
     if (sub.cmd === null) {
-      throw new XWCMDError(`No '${cmdName}' sub command found!`)
+      throw new XWCMDError(`No '${name}' sub command found!`)
     }
     return sub.cmd.run(callArgv)
   }
@@ -196,12 +196,13 @@ export class Command {
    */
   help() {
     // [subCmdName, parseByChar(subCmd), desc]
-    this.render.addExtraInfo({
+    this.render.addExtra({
       type: 'Commands',
-      info: this.subs.map(({ meta: { name: cmdName, description = '', hint = '' } }) => ['', cmdName, hint, 'string', description])
+      info: this.subs.map(({ meta: { name: cmdName, description = '', hint = '' } }) =>
+        ['', cmdName, hint, 'string', description])
     })
     // TODO for all commands, display the help
-    if (getMainCmd(this).render.settings.help) this.render.display()
+    if (this.main.render.settings.help) this.render.display()
     else {
 
     }
@@ -235,11 +236,9 @@ export class Command {
    * ```
    */
   private runDefault(args = this.argv) {
-    const params = parseDefaultArgs(this.defaultCmd)
+    const params = parseDefaultArgs(this.meta.default!)
     if (!params) return this.process()
-    // if (!params) return errorWithHelp(this.meta, `Invalid Command ${colors.underline(flag)}.`)
     //  insert default params to capture the user input to the specific flag
-
     let flagIndex = args.findIndex((v) => isFlag(v)),
       n = 0, pL = params._.length,
       _argv = args.slice(0, flagIndex < 0 ? undefined : flagIndex);
@@ -264,7 +263,7 @@ export class Command {
     // check required param
     params.required.every((r) => {
       if (!_argv.includes(FLAG_STR + r))
-        throw new XWCMDError(`Missing required parameter '${colors.underline(r)}'!`)
+        throw new XWCMDError(`Missing required parameter '${r}'!`)
     })
 
     const argvs = args.slice(
@@ -331,8 +330,8 @@ export class Command {
       /**  the `x` is not subCommand, it will be treated as a flag */
       else {
         if (showHelp) return this.help()
-        if (!this.defaultCmd) return errorWithHelp(this.meta, `Invalid Command '${argv_}'.`)
-        else return this.runDefault(argv)
+        if (this.meta.default) return this.runDefault(argv)
+        return errorWithHelp(this.meta, `Invalid Command '${argv_}'.`)
       }
     }
   }
@@ -364,16 +363,14 @@ export class Command {
       action = maybeAction as CommandAction;
     }
 
-    const [subCmd, desc = ''] = toArray(cmd)
+    const [subCmd = '', desc = ''] = toArray(cmd)
 
     /** @example ['i', 'in', 'install'] */
     const alias = splitFlag(subCmd).map(cleanArg)
-    const defaultArg = parseByChar(subCmd, ['\[', '\]'])
     // init subCommand
     this.subs.push(new Command({
       name: alias.pop()!,
       version: this.meta.version,
-      default: defaultArg ? `[${defaultArg}]` : '',
       type: 'sub',
       alias: alias,
       description: desc,

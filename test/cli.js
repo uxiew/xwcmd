@@ -41,11 +41,14 @@ cmd.examples([
   'bun add --peer esbuild'
 ])
 
-// 默认运行 install 命令
-cmd.default('[...pkg!, !boolean!, -ss!]');
+// 默认运行的参数
+// cmd.default(
+//   [`-in! `, `in's description`],
+//   [`...pkg`, `pks's description`],
+// );
 
 cmd.sub(
-  ['i,in, install [pkg] <lodash, axios, react>'],
+  ['i,in, install <lodash, axios, react>'],
   [
     [`${colors.bgYellow('-in')} `, `in's description`, 19],
     ['in2', `in2's description`, `in2's defaultValue`],
@@ -54,7 +57,8 @@ cmd.sub(
   (args, pkg) => {
     console.log(`install+++`, args, pkg);
   }
-);
+)
+  .default(['pkg'])
 
 
 cmd.sub(['un,uninstall <fetch_all_theme_for_love>', `uninstall's description`], [

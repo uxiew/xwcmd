@@ -18,12 +18,13 @@ type ActionContext = {
   // options?: Command['options'],
 }
 
-export type Group = 'Header' | 'Tail' | 'Usage' | 'Commands' | 'Flags' | 'Examples'
-export type SettingGroup = Exclude<Group, 'Commands' | 'Flags'>
+export type ExtraGroup = 'Commands' | 'Flags' | 'Arguments'
+export type Group = 'Header' | 'Tail' | 'Usage' | 'Examples' | ExtraGroup
+export type SettingGroup = Exclude<Group, ExtraGroup>
 
 export type CommandAction = (arg: ActionContext['args'], defaultResult?: ActionContext['default']) => Awaited<any>
 
-export type Output = Record<SettingGroup, string[]> & Record<'Commands' | 'Flags', string[][]>
+export type Output = Record<SettingGroup, string[]> & Record<ExtraGroup, string[][]>
 
 /**
  * last string is alias, for example:
@@ -50,6 +51,7 @@ export type InOutput = boolean
 export type Arg = [Flags, Description] | [Flags, Description, DefaultValue]
 
 export type Args = Array<Arg>
+export type DefaultArgs = Array<Exclude<SubCmd, Flags>>
 
 export interface RenderSettings {
   /** indent level, default `2` */
@@ -85,7 +87,7 @@ export interface Meta {
   type?: 'main' | 'sub'
   description?: string
   /** defualt command arguments */
-  default?: string
+  default?: DefaultArgs
   hint?: string
   alias?: string[]
   /** parent Render */

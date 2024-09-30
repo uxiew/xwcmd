@@ -37,6 +37,10 @@
       "types": "./dist/colors/picocolors.d.ts",
       "default": "./dist/colors/picocolors.js"
     },
+    "./command": {
+      "types": "./dist/command.d.ts",
+      "default": "./dist/command.js"
+    },
     "./utils": {
       "types": "./dist/utils.d.ts",
       "default": "./dist/utils.js"

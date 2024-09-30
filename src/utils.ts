@@ -3,10 +3,10 @@ import { parse } from "./args/parser";
 import { type Command } from "./command";
 import { XWCMDError } from "./error";
 import type {
-  Arg, Args,
-  CmdOptions, DefineCommands,
-  FormatArgs, Meta, ProcessArgv,
-  Resolvable
+  Arg, Args, ProcessArgv,
+  CmdOptions, DefaultArgs, DefineCommands,
+  FormatArgs, Meta,
+  Resolvable,
 } from "./types";
 
 export const FLAG_STR = '--'
@@ -83,7 +83,7 @@ export function isNumericLike(value: any): boolean {
   return false;
 }
 
-export const toArray = (val: any | any[]) => Array.isArray(val) ? val : [val]
+export const toArray = <T extends any>(val: T | T[]) => Array.isArray(val) ? val : [val]
 
 /**
  * remove extra Angle brackets
@@ -105,28 +105,14 @@ export const parseByChar = (val: string, symbols = ['<', '>']) => val.match(new 
  *     string: ['pkg'],
  *     boolean: ['re'],
  *     array: [files],
- *     required['pkg', 're']
+ *     required:['pkg', 're'],
+ *     _:[],
  *   }
  * ```
  */
-export const parseDefaultArgs = (defaultFlag: string) => {
-  const result = {
-    description: {},
-    alias: {},
-    hints: {},
-    required: [],
-    // collect all default args for use later
-    _: [] as string[]
-  }
-  // `pkg!, -n, ...files`
-  const params = (defaultFlag.match(/\[([^]*)\]/)?.[1] ?? '')
-  if (params.length > 0)
-    params.split(',').forEach(param => {
-      const p = param.trim()
-      argsHandle([p, ''], result)
-      result._.push(cleanArg(p))
-    })
-  else return
+export const parseDefaultArgs = (defaultArgs: DefaultArgs) => {
+  const result = parseCliArgs(defaultArgs) as CmdOptions & { _: string[] }
+  result._ = defaultArgs.map((p) => cleanArg(p[0]))
   return result
 }
 
@@ -142,11 +128,12 @@ export const cleanArg = (val: string) => {
     .replace(/\|.+$/, '')
     .replace('&', '|')
     .trim()
-    //Remove leading signs `!`, `...`, and `-`
-    .replace(/^(!|\.\.\.|-)/, '')
+    // Remove leading signs `!`, `...` and `-`
+    .replace(/^(!|-|\.\.\.)/, '')
     // remove the ending required sign `!`
     .replace(/!$/, '')
-  return trimmed;
+
+  return trimmed
 }
 
 /**
@@ -230,7 +217,7 @@ function argsHandle(args: Arg, options: CmdOptions) {
  * }
  * ```
  */
-export function parseCliArgs(args: Args) {
+export function parseCliArgs(args: Args | DefaultArgs) {
   const options: CmdOptions = {
     alias: {},
     description: {},
@@ -299,46 +286,13 @@ export function isLink(text: string) {
 }
 
 /**
- * get main command instance
- */
-export function getMainCmd(cmd: Command) {
-  if (cmd.type === 'main') return cmd
-  return getMainCmd(cmd.meta.parent!)
-}
-
-/**
- * Gets the appropriate subcommand args,
- * if not found, return `false`.
- * @param {String} name - sub command' name
- * @param {Command[]} subCmds - subs commands
- * @param {String[]} argv - command argv, relative argv path.
- */
-export function getSubCmd(name: string, subCmds: Command[], argv: string[] = []) {
-  const cmdInfo: { cmd: Command | null, argv: string[] } = {
-    cmd: null,
-    argv: [],
-  }
-  for (const cmd of subCmds) {
-    cmdInfo.argv.push(cmd.meta.name)
-    if (matchSubCmd(cmd.meta, name)) {
-      cmdInfo.cmd = cmd
-      return cmdInfo
-    } else {
-      const sub = getSubCmd(name, cmd.subs)
-      cmdInfo.cmd = sub.cmd
-      cmdInfo.argv.push(...sub.argv)
-      return cmdInfo
-    }
-  }
-  return cmdInfo
-}
-
-
-/**
  * make ANSI string concat with insertString
  */
 export function concatANSI(str: string, insertStr: string) {
-  const newANSIStr = str.replace(/\x1B\[[0-9;]*[mGK](.*?)\x1B\[[0-9;]*[mGK]/g, (m, p) => (m ? m.replace(p, insertStr + p) : m))
+  const newANSIStr = str.replace(
+    /\x1B\[[0-9;]*[mGK](.*?)\x1B\[[0-9;]*[mGK]/g,
+    (m, p) => (m ? m.replace(p, insertStr + p) : m)
+  )
   return newANSIStr === str ? insertStr + str : newANSIStr
 }
 
@@ -353,4 +307,43 @@ export function resolveValue<T>(input: Resolvable<T>): T | Promise<T> {
  */
 export function parseArgs(argv: ProcessArgv, args: Exclude<DefineCommands['args'], undefined>) {
   return parse(argv.slice(2), parseCliArgs(args))
+}
+
+/**
+ * get main command instance
+ * @param { Command } cmd - current command
+ */
+export function resolveMainCmd(cmd: Command) {
+  if (cmd.type === 'main') return cmd
+  return resolveMainCmd(cmd.meta.parent!)
+}
+
+/**
+ * Gets subcommand and the appropriate subcommand path,
+ * @param { String } name - sub command' name
+ * @param { Command } cmd - current command
+ */
+export function resolveSubCmd(cmd: Command, name: string) {
+  const cmdInfo: { cmd: Command | null, argv: string[] } = {
+    cmd: null,
+    argv: [],
+  }
+  if (cmd.type !== "main") cmd = resolveMainCmd(cmd)
+
+  const resolve = (cmd: Command) => {
+    for (const c of cmd.subs) {
+      cmdInfo.argv.push(c.meta.name)
+      if (matchSubCmd(c.meta, name)) {
+        cmdInfo.cmd = c
+        return cmdInfo
+      } else {
+        const sub = resolve(c)
+        cmdInfo.cmd = sub.cmd
+        return cmdInfo
+      }
+    }
+    return cmdInfo
+  }
+
+  return resolve(cmd)
 }

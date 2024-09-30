@@ -77,7 +77,6 @@ describe('test all utils function', () => {
     expect(parseType(v2 + '<files>')).toEqual(['array', 'list', false]);
   })
 
-
   it('`isFlag` should work', () => {
     const flag = '--test';
     const sflag = '-t';
@@ -88,7 +87,9 @@ describe('test all utils function', () => {
   });
 
   it('`parseDefaultArgs` should work correctly', () => {
-    expect(parseDefaultArgs('[pkg!, !re!, ...files]')).toEqual({
+    expect(parseDefaultArgs([
+      ['pkg!'], ['!re!'], ['...files']
+    ])).toEqual({
       "_": [
         "pkg",
         "re",
@@ -172,7 +173,6 @@ describe('test all utils function', () => {
       default: { str: 'str default value', number: 'number default value' },
       required: ['xxx']
     });
-
   });
 
 })

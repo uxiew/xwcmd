@@ -1,10 +1,10 @@
 
-import { define, parseArgs } from '../src';
+import { define } from '../src';
 import { colors } from '../src/colors/picocolors';
+import { parseArgs } from '../src/utils';
 
 
 describe('cli/define test', () => {
-
 
   it('`define` should work as expected', () => {
     const a = define({
@@ -21,7 +21,6 @@ describe('cli/define test', () => {
       version: '1.1.1',
       type: 'main',
       description: 'a cli desc',
-      default: '',
       hint: '',
       alias: [],
       parent: null
@@ -43,8 +42,7 @@ describe('cli/define test', () => {
       "boolean": false,
       "number1": 0,
       "array1": [],
-      "_": [
-      ],
+      "_": [],
       "mean": "Xee",
       "target": "astronaut",
     })

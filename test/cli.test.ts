@@ -1,8 +1,7 @@
 import type { MockInstance } from 'vitest';
-import { type Meta } from '../src';
+import { resolveSubCmd, type Meta } from '../src';
 import { colors } from '../src/colors/picocolors';
 import { Command } from '../src/command';
-import { isFlag } from '../src/utils';
 
 describe('Command', () => {
   let cmd: Command, mockError: MockInstance
@@ -11,16 +10,10 @@ describe('Command', () => {
   afterEach(() => {
     mockError.mockRestore();
   });
-  beforeEach(() => {
+  beforeEach(async () => {
     mockError = vi.spyOn(console, 'error').mockImplementation((a) => a);
     // 创建一个 Command 实例用于测试
-    cmd = new Command({
-      name: "test",
-      version: "1.1.1",
-    }, [
-      ['-a,arget', "arget desc", "arget default value"],
-      ['-t,test', "test desc", "test default value"]
-    ]);
+    cmd = (await import('./demo')).getCmd()
   });
 
   it('test subcommand created correctly', () => {
@@ -33,8 +26,7 @@ describe('Command', () => {
       alias: ['i', 'in'],
       hint: 'lodash',
       description: 'desc',
-      default: '',
-      version: '1.1.1',
+      version: cmd.meta.version,
       parent: cmd
     });
   });
@@ -70,12 +62,12 @@ describe('Command', () => {
   it('should error when invalid sub command and flag', () => {
     // Usage: bun add [flags] <pkg> [...<pkg>]
     const subCmd = cmd.sub(
-      ['i,in, install [-xxx!,] <lodash>', 'install"s description'],
+      ['i,in, install [,] <lodash>', 'install"s description'],
       [
         ['r,!recursive', 'recursive desc', false]
       ], (a, b) => {
         console.log(a, b);
-      })
+      }).default(['-xxx!'])
     // const argv = ['node', 'app', 'ix'];
     // no action, no real run, so no error will be triggered
     cmd.defineAction(() => { })
@@ -93,23 +85,31 @@ describe('Command', () => {
       ], (a, b) => {
         console.log(`install running`, a, b);
       }).sub(
-        ['fetch [-id!]', `fetch's description`]
-        , (a, b) => {
+        ['fetch', `fetch's description`],
+        (a, b) => {
           console.log(`fetch running`, a, b);
           return fetch(`https://jsonplaceholder.typicode.com/todos/${b.id}`)
             .then(response => response.json())
-        }).sub(
-          ['xa [-xxx!]', `xsa's description`]
-          , (a, b) => {
-            console.log(`xsa running`, a, b);
-          })
-
+        }).default(['-id!'])
+      .sub(
+        ['xa', `xa's description`]
+        , (a, b) => {
+          console.log(`xa running`, a, b);
+        }).default(['-x1!'])
+    subCmd.sub(
+      ['xx', `xx's description`]
+      , (a, b) => {
+        return { a, b }
+      }).default(['-x2!'])
     // no action, no real run, so no error will be triggered
     cmd.defineAction(() => { })
 
-    const res = await subCmd.call('fetch', ['12', 'a', 'bc'])
-    console.log(`result: `, res)
-    expect(Object.keys(res)).toContain('userId')
+    cmd.default(['...pksg!'], ['!boolean!'], ['-ss!']);
+
+    const resFetch = await subCmd.call('fetch', ['12', 'a', 'bc'])
+    const resXX = await subCmd.call('xx', ['12', 'a', 'bc'])
+    expect(Object.keys(resFetch)).toContain('userId')
+    expect(resXX.b).toEqual({ x2: 12 })
   })
 
 });

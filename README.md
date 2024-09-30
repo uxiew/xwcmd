@@ -123,8 +123,10 @@ Finally we need to call it
 
 - [x] more test
 - [x] value hint.
+- [ ] globalSet?
+- [ ] env?
 - [ ] choices.
-- [ ] support more colors (see `bun`).
+- [ ] remove row layout?.
 
 ## any problem?
 

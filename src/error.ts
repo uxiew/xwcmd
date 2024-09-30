@@ -12,7 +12,7 @@ export class XWCMDError extends Error {
 }
 
 export function log(type = '', ...message: any[]) {
-  print(colors.cyan('[XWCMD]: ' + type) + ' '), message.forEach((m) => print(m))
+  print('[XWCMD]: ' + type + ' '), message.forEach((m) => print(m))
 }
 
 export function errorWithHelp(meta: Meta, message: string) {

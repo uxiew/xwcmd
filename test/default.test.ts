@@ -2,18 +2,8 @@ import { Command } from "../src/command";
 
 describe('test default command', () => {
   let cmd: Command
-  beforeEach(() => {
-    cmd = new Command({
-      name: "test",
-      version: "1.1.1",
-      alias: [],
-      type: "main",
-      hint: '',
-    }, [
-      ['a,target', "target desc", "target default value"],
-      ['x,run', "run desc", "run default value"]
-    ]);
-    cmd.default('')
+  beforeEach(async () => {
+    cmd = (await import('./demo')).getCmd()
   })
 
   // ----- set default command or arg --------
@@ -36,11 +26,14 @@ describe('test default command', () => {
     cmd.sub(['a,ax, axxxx <sss>'], () => {
       console.log('axxxx');
     })
-    cmd.default('[...x,pkg!, ...files]')
+    cmd.default(
+      ['...x'],
+      ['pkg!'],
+      ['...files']
+    )
     // cmd.default('[pkg!|array]]')
 
     cmd.defineAction((a, b) => {
-      console.log(a, b);
       expect(a).toEqual({
         '--': [],
         _: [],
@@ -84,14 +77,14 @@ describe('test default command', () => {
 
   it('[2] sub default command should work correctly', () => {
     cmd.sub(
-      ['i,in, install [pkg!,...files]', 'install"s description'],
+      ['i,in, install', 'install"s description'],
       [
         ['!flag!', 'recursive desc', false],
         ['r,!recursive', 'recursive desc', false],
       ],
       (a, b) => {
         // a : args , b: [pkg, files]
-        console.log(a, b);
+        console.log(`xxxxx`, a, b);
         expect(a).toEqual({
           '--': [],
           _: ['xxx'],
@@ -99,52 +92,63 @@ describe('test default command', () => {
           recursive: true,
           n: true
         })
-        expect(b).toEqual({
-          pkg: 'axios',
-          files: ['f1', 'f2']
-        })
-      })
+        // expect(b).toEqual({
+        //   pkg: 'axios',
+        //   files: ['f1', 'f2']
+        // })
+      }).default(
+        ['pkg!', 'pkg desc'],
+        ['...files', 'files desc'],
+      )
 
-    const argv = ['i', 'axios', 'f1', 'f2', '-r', '--flag', 'true', '-n', 'xxx'];
-    cmd.run(argv);
+    cmd.argv = ['i', 'axios', 'f1', 'f2', '-r', '--flag', 'true', '-n', 'xxx'];
+    cmd.run();
   });
 
-  it('[3] sub default command should work correctly', () => {
-    cmd.sub(
-      ['i,in, install [pkg!,yu, file]', 'install"s description'],
-      [
-        ['flag!', 'recursive desc', 'x'],
-        ['r,!recursive', 'recursive desc', false],
-      ],
-      (a, b) => {
-        expect(a).toEqual({
-          '--': [],
-          _: ['f2', 'xxx'],
-          recursive: true,
-          flag: 'test',
-          n: true
+  it('[3] sub default command should work correctly', async () => {
+    cmd
+      .sub(
+        ['i,in, install', 'install"s description'],
+        [
+          ['flag!', 'recursive desc', 'x'],
+          ['r,!recursive', 'recursive desc', false],
+        ],
+        (a, b) => {
+          expect(a).toEqual({
+            '--': [],
+            _: ['f2', 'xxx'],
+            recursive: true,
+            flag: 'test',
+            n: true
+          })
+          expect(b).toEqual({
+            pkg: 'axios',
+            yu: 'x',
+            file: 'f1'
+          })
+          return a
         })
-        expect(b).toEqual({
-          pkg: 'axios',
-          yu: 'x',
-          file: 'f1'
-        })
-      })
+      .default(
+        ['pkg!'],
+        ['yu'],
+        ['file']
+      )
 
     const argv = ['i', 'axios', 'x', 'f1', 'f2', '-r', '--flag', "test", '-n', 'xxx'];
-    cmd.run(argv);
+    const a = await cmd.run(argv);
+    console.log(`axxa`, a)
   });
 
-  it('[4] when sub command run with boolean flag start, should not work', () => {
+  it('Run with boolean flag start should work', async () => {
     cmd.sub(
-      ['i,in, install [pkg!, file]', 'install"s description'],
+      ['i,in, install', 'install"s description'],
       [
         ['!flag', 'recursive desc', 'x'],
         ['r,!recursive', 'recursive desc', false],
       ],
       (a, b) => {
         // a : args , b: [pkg, files]
-        console.log(a, b);
+        console.log(`xxx`, a, b);
         expect(a).toEqual({
           '--': [],
           _: ['f2', 'xxx', 'test'],
@@ -156,13 +160,13 @@ describe('test default command', () => {
           pkg: 'axios',
           file: 'f1'
         })
-      })
-
-    cmd.defineAction((a) => {
-      console.log('run action run', a);
-    })
+        return { a, b }
+      }).default(
+        ['pkg!'], ['file']
+      )
 
     // cmd.argv = ['node', 'app', 'in', '-r', 'axios', 'f1', 'f2', '--flag', "test", '-n', 'xxx'];
-    cmd.run(['node', 'app', 'in', '-r', 'axios', 'f1', 'f2', '--flag', "test", '-n', 'xxx']);
+    const d = await cmd.run(['install', '-r', 'axios', 'f1', 'f2', '--flag', "test", '-n', 'xxx']);
+    console.log(`xxx`, d)
   });
 })

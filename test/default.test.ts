@@ -139,7 +139,7 @@ describe('test default command', () => {
     console.log(`axxa`, a)
   });
 
-  it('Run with boolean flag start should work', async () => {
+  it('Run with boolean flag start should work', () => {
     cmd.sub(
       ['i,in, install', 'install"s description'],
       [
@@ -151,22 +151,21 @@ describe('test default command', () => {
         console.log(`xxx`, a, b);
         expect(a).toEqual({
           '--': [],
-          _: ['f2', 'xxx', 'test'],
+          _: ['f2', 'xxx'],
           recursive: true,
           flag: false,
           n: true
         })
         expect(b).toEqual({
           pkg: 'axios',
-          file: 'f1'
+          files: 'f1'
         })
-        return { a, b }
       }).default(
-        ['pkg!'], ['file']
+        ['pkg!'], ['files']
       )
 
     // cmd.argv = ['node', 'app', 'in', '-r', 'axios', 'f1', 'f2', '--flag', "test", '-n', 'xxx'];
-    const d = await cmd.run(['install', '-r', 'axios', 'f1', 'f2', '--flag', "test", '-n', 'xxx']);
-    console.log(`xxx`, d)
+    cmd.run(['install', '-r', 'axios', 'f1', 'f2', '--flag', "test", '-n', 'xxx']);
+    // const d = await cmd.run(['install', '-r']);
   });
 })

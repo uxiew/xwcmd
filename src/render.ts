@@ -7,20 +7,19 @@ import {
   stringLen, stripFlag, toArray
 } from "./utils";
 import type {
-  RenderSettings, Settings,
+  RenderSettings,
   Output, FormatArgs,
   SettingGroup,
   RequiredMeta,
   DefaultArgs,
-  ExtraGroup
+  ExtraGroup,
+  AllRenderSettings
 } from "./types";
 
 export class Render {
 
   settings: RenderSettings = {
     indentLevel: 2,
-    showDefaultValue: true,
-    help: true,
     /** default description's number of spaces from the left */
     descPadLeft: 28,
   }
@@ -88,7 +87,6 @@ export class Render {
   setUsage(meta: RequiredMeta) {
     this.extras.Usage = [];
     const { parent: cmd, name, type, default: dArgs } = meta
-    console.log(`dArgs`, dArgs)
 
     const ARGS = dArgs ? ' <...arguments>' : ''
     this.addLine({
@@ -128,11 +126,10 @@ export class Render {
   /**
    * Change the Command's output usage.
    */
-  set(settings: Settings) {
+  set(settings: AllRenderSettings) {
     const {
       header, Usage, examples, tail
     } = { ...settings }
-    Object.assign(this.settings, settings)
 
     // change the output's group name or group's lines
     if (Usage) {

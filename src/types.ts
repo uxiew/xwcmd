@@ -53,18 +53,28 @@ export type Arg = [Flags, Description] | [Flags, Description, DefaultValue]
 export type Args = Array<Arg>
 export type DefaultArgs = Array<Exclude<SubCmd, Flags>>
 
+export interface CommandSettings {
+  /** print help info, default `true`*/
+  help: boolean
+  /**
+   * TODO Custom error messages
+   */
+  error?: () => void
+  /**
+   * Callback function that runs whenever a parsed flag has not been defined in options.
+   * return `false` to abort the action run.
+   */
+  unknownArgsError?: (flag: string, meta: Meta) => any
+}
+
 export interface RenderSettings {
   /** indent level, default `2` */
   indentLevel: number
-  /** show default value, default `true`*/
-  showDefaultValue: boolean
-  /** print help info, default `true`*/
-  help: boolean
   /** default description's number of spaces from the left, default `28` */
   descPadLeft: number
 }
 
-export interface Settings extends Partial<RenderSettings> {
+export interface AllRenderSettings extends Partial<RenderSettings> {
   /**
    * tail Extra info
    *

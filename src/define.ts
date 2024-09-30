@@ -1,17 +1,18 @@
 import { Command } from "./command";
-import type { DefineCommands } from "./types";
+import { Render } from "./render";
+import type { DefineCommands, CommandSettings } from "./types";
 import { XWCMDError } from "./error";
+import { ArgsOptions } from "./args/types";
 
 /**
-   * invoke given any sub command
-   */
-export function call(cmd: Command, callArgv: any[] = []) {
-  resolveMainCmd()
-  return cmd.run(callArgv)
+ * set global settings, like `version`,`render.settings`
+ */
+export function setConfig(settings: CommandSettings) {
+  const { unknownArgsError, help, error } = settings
+  if (unknownArgsError) Command.settings.unknownArgsError = unknownArgsError
+  if (help) Command.settings.help = help
+  if (error) Command.settings.error = error
 }
-
-
-export function set() { }
 
 /**
  * render output

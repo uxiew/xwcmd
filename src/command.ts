@@ -9,13 +9,14 @@ import {
   parseByChar, formatArgs,
   parseDefaultArgs, stripFlag,
   resolveSubCmd, resolveMainCmd,
+  simpleEqual,
 } from "./utils";
 import { XWCMDError, errorWithHelp, log } from "./error";
 import type {
   Args, CmdOptions, ProcessArgv,
   CommandAction, FormatArgs, Meta,
-  RequiredMeta, Settings, SubCmd, Awaitable,
-  DefaultArgs
+  RequiredMeta, SubCmd, DefaultArgs,
+  AllRenderSettings, CommandSettings
 } from "./types";
 import stripAnsi from "strip-ansi";
 
@@ -23,6 +24,10 @@ import stripAnsi from "strip-ansi";
  * manager all command
  */
 export class Command {
+
+  static settings: CommandSettings = {
+    help: true,
+  }
 
   render: Render;
   /** subCommands */
@@ -93,10 +98,6 @@ export class Command {
     this.render = new Render(this.meta as RequiredMeta, this.formatArgs)
   }
 
-  static create(meta: Meta, flags: Args = []) {
-    return new Command(meta, flags)
-  }
-
   /**
    * parse command line argv
    * @param {ArgsOptions} options - args parser options
@@ -107,9 +108,10 @@ export class Command {
       "populate--": true,
       camelize: true,
       unknown: (flag) => {
-        errorWithHelp(this.meta, `Invalid Argument '${flag}'.`)
-        // abort
-        return false
+        if (Command.settings.unknownArgsError) {
+          return Command.settings.unknownArgsError(flag, this.meta)
+        }
+        return errorWithHelp(this.meta, `Invalid Argument '${flag}'.`)
       }
     }
 
@@ -127,6 +129,8 @@ export class Command {
         result = res
       }
       const parsed = resolved ?? this.parse();
+      // abort
+      if (!parsed) return
       return await action(parsed, result)
     }
     return this
@@ -137,7 +141,10 @@ export class Command {
    *  @param {DefaultArgs} arg - command arguments
    */
   default(...arg: DefaultArgs) {
-    // check `arg`
+    // check `arg`, and command's meta default
+    if (arg.length === 1 && Array.isArray(arg[0][0])) {
+      arg = arg[0]
+    }
     if (arg.some((a) => !Array.isArray(a))) {
       throw new XWCMDError(`Invalid default command arguments '${arg}' format.`)
     }
@@ -145,10 +152,6 @@ export class Command {
     this.render.setUsage(this.meta as RequiredMeta)
     this.render.setArgument(arg)
     return this
-  }
-
-  resolveMainCmd() {
-    resolveMainCmd
   }
 
   /**
@@ -163,32 +166,8 @@ export class Command {
     return sub.cmd.run(callArgv)
   }
 
-  /**
-   * set settings, like `version`,`render.settings`
-   */
-  set(settings: Settings & {
-    version?: string,
-    /**
-     * TODO Custom error messages
-     */
-    error?: () => void,
-    /**
-     * Callback function that runs whenever a parsed flag has not been defined in options.
-     * return `true` to abort the action run.
-     */
-    unknownArgsError?: (flags: string) => void,
-  }) {
-    const { version, unknownArgsError } = settings
-    // TODO
-    if (unknownArgsError) this.options.unknown = unknownArgsError
-    if (version) {
-      this.meta.version = version
-    }
-    this.render.set(settings)
-  }
-
-  version() {
-    print(this.meta.version);
+  getMeta() {
+    return this.meta
   }
 
   /**
@@ -202,16 +181,24 @@ export class Command {
         ['', cmdName, hint, 'string', description])
     })
     // TODO for all commands, display the help
-    if (this.main.render.settings.help) this.render.display()
-    else {
+    if (Command.settings.help) this.render.display()
+  }
 
+  /**
+   * set settings, like `version`,`render.settings`
+   */
+  set(settings: AllRenderSettings & { version: Meta['version'] }) {
+    const { version } = settings
+    if (version) {
+      this.meta.version = version
     }
+    this.render.set(settings)
   }
 
   /**
    * add examples for this command, it will display in help info.
    */
-  examples(lines: Settings['examples']) {
+  examples(lines: AllRenderSettings['examples']) {
     this.render.set({
       examples: lines
     })
@@ -295,7 +282,7 @@ export class Command {
     // if ()
     if (isFlag(argv_)) {
       if (showHelp) return this.help()
-      if (showVersion) return this.version()
+      if (showVersion) return print(this.meta.version)
 
       let cmdFlag = '', flag = stripFlag(argv_)
       const isCmdFlag = Object.entries(this.options.alias!).some(([flagName, alias]) => {
@@ -311,8 +298,13 @@ export class Command {
         // like `npm -D install tsx`, Move boolean/undefined value to the end, need check all commands flag include sub commands.
         if (this.options.boolean?.includes(cmdFlag)) {
           // move first arg to the end
-          argv.push(argv.splice(0, 1)[0])
-          return this.run(argv)
+          let newArg = [...argv]
+          const last = newArg.splice(0, 1)[0]
+          newArg = [...newArg, last]
+          if (!simpleEqual(newArg, argv)) {
+            this.argv = newArg
+            return this.run()
+          }
         }
       }
       return this.process()
@@ -370,7 +362,7 @@ export class Command {
     // init subCommand
     this.subs.push(new Command({
       name: alias.pop()!,
-      version: this.meta.version,
+      version: this.main.meta.version,
       type: 'sub',
       alias: alias,
       description: desc,

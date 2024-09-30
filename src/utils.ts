@@ -15,7 +15,12 @@ export const DEFAULT_STR = '__'
 /** Regex to replace quotemark. */
 export const QUOTES_REGEX = /(^"|"$)/g;
 
+// Prints to stdout with newline.
 export const print = console.log
+
+export function simpleEqual(a: string[], o: string[]) {
+  return a.every((k, i) => o.indexOf(k) === i)
+}
 
 /**
  * Check if a value is a flag. (e.g., `-f`, `--option`, `--option=value`)

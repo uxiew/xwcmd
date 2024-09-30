@@ -24,6 +24,10 @@ usage see [test/cli.js](./test/cli.js)
 
 Create the main Command. the `options` is a object, reference above example.
 
+### `setConfig(options)`
+
+Set the global configuration of all commands.
+
 #### `options.args`
 
 Let me explain, for examples:
@@ -60,6 +64,8 @@ The name of the command.
 
 The version of the command.
 
+## Command's Method
+
 ### `sub(subCommandMeta, args, action)`
 Add a sub-command.
 
@@ -86,7 +92,7 @@ The third parameter `action` is a function that is called when the sub-command i
 
 ### `set(options: Settings)`
 
-Set configuration options
+Set this command configuration options.
 
 ### `default(cmdDefaultParam: string)`
 
@@ -108,9 +114,8 @@ Invoke any registered subcommand.
 
 Display examples information
 
-### `version()`
-
-Display version information
+### `getMeta()`
+get command's meta information
 
 ### `help()`
 

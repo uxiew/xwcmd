@@ -94,12 +94,12 @@ The third parameter `action` is a function that is called when the sub-command i
 
 Set this command configuration options.
 
-### `default(cmdDefaultParam: string)`
+### `default(args: DefaultArgs)`
 
 Default command parameters.
 
 ```ts
-cmd.default('[...pkg!]');
+cmd.default(['...pkg!']);
 ```
 
 ### `call(name:string, argv: any[])`
@@ -128,7 +128,7 @@ Finally we need to call it
 
 - [x] more test
 - [x] value hint.
-- [ ] globalSet?
+- [x] globalSet?
 - [ ] env?
 - [ ] choices.
 - [ ] remove row layout?.

@@ -3,6 +3,7 @@
   "version": "0.1.1",
   "description": "Opinionated, Simple and Efficient CLI Builder, happy to Use",
   "license": "MIT",
+  "packageManager": "pnpm@9.12.0",
   "author": "ChandlerVer5 (https://github.com/uxiew)",
   "repository": "https://github.com/uxiew/xwcmd",
   "keywords": [

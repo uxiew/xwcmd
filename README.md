@@ -8,6 +8,9 @@ Opinionated, Simple and Efficient CLI Builder. But more flexible style, happy to
 - Just a few simple character definitions
 - Support multi-level subcommands, theoretically can be unlimited subcommand nesting
 
+
+[WIP]  Refactoring!!! Look for simpler, more efficient ways
+
 ## Usage
 
 Install:

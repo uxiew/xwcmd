@@ -1,60 +1,118 @@
-import type { ArgsOptions } from "./args/types";
-import type { Command } from "./command";
+import type { ArgsOptions, Argv, Arrayable, BaseArgsOptions } from "./argv/types";
+import type { CLI } from "./CLI";
 
 export type ProcessArgv = typeof process['argv']
 
 export type Awaitable<T> = () => T | Promise<T>;
 export type Resolvable<T> = T | Promise<T> | (() => T) | (() => Promise<T>);
 
-export type CmdOptions = ArgsOptions & {
-  required: string[]
-  description: Record<string, string>;
-  hints: Record<string, string>;
+export type TypeOpts = BaseArgsOptions & { required?: CLIOptions['required'] }
+
+/**
+* cmd.sub's parameter
+*/
+export type CLIItemDef = {
+  [k in string]: {
+    type?: keyof Omit<BaseArgsOptions, 'default' | 'alias'>
+    alias?: Arrayable<string>
+    default?: DefaultValue
+    choices?: Required<CLIOptions>['choices'][string]
+    required?: boolean
+  }
+}
+export type CLIParamDef = Partial<Omit<MetaResult, 'type'>>
+  & Pick<MetaResult, 'name'>
+  & {
+    /** cli's arguments */
+    arguments?: Omit<CLIItemDef, 'alias'>
+    options?: CLIItemDef
+  }
+
+export type CLIOptions = ArgsOptions & {
+  /** Parsing encountered error */
+  error?: ArgsResult['error']
+  /**
+  * add choices for this command, constraint some arg value can only be one of the choices
+  */
+  choices?: Record<string, (string | number | boolean)[]>
+  required?: string[]
 }
 
+interface BaseResult {
+  name: string;
+}
+
+export interface MetaResult extends BaseResult {
+  version: string;
+  type: Meta['type'];
+  alias?: Meta['alias'];
+}
+
+type ArgsResult = TypeOpts & {
+  error?: boolean
+  _: string[],
+}
+
+interface CmdsResult extends BaseResult {
+  alias: string[];
+}
+
+export type CLIGroup = 'meta' | 'args' | 'cmds' | 'opts'
+
+type Result<T extends CLIGroup> =
+  T extends 'args' ? ArgsResult :
+  T extends 'cmds' ? CmdsResult[] :
+  T extends 'opts' ? CLIOptions :
+  never;
+
+export type ParsedResult = {
+  [K in CLIGroup]: K extends 'meta' ? MetaResult : Result<K>;
+}
+
+export type CLIOpts = Omit<CLIOptions,
+  'shortFlagGroup'
+  | 'parseNumber'
+  | 'populate--'
+  | 'camelize'
+  | 'coerce'
+  | 'unknown'
+>
+
 type ActionContext = {
-  args: ReturnType<Command['parse']>,
+  args: ReturnType<CLI['parse']>,
   default: Record<string, any>;
-  // options?: Command['options'],
+  cmd: CLI,
 }
 
 export type ExtraGroup = 'Commands' | 'Flags' | 'Arguments'
 export type Group = 'Header' | 'Tail' | 'Usage' | 'Examples' | ExtraGroup
 export type SettingGroup = Exclude<Group, ExtraGroup>
 
-export type CommandAction = (arg: ActionContext['args'], defaultResult?: ActionContext['default']) => Awaited<any>
+export type CLIAction = (arg: ActionContext['args'],
+  defaultResult: ActionContext['default'],
+  cmd: ActionContext['cmd']) => Awaited<any>
 
 export type Output = Record<SettingGroup, string[]> & Record<ExtraGroup, string[][]>
 
-/**
- * last string is alias, for example:
- * `t` and `ta` is `target`'s alias
- * ```
- * t,ta, target
- * ```
- */
-type Flags = string
-type Commands = string
-type ArgDataType = 'string' | 'boolean' | 'number' | 'Array'
+// export type FormatArgs = [Flags, Flags, ValueHint, ArgDataType, Description, DefaultValue?]
 
-type Description = string
-type Examples = string | string[] | undefined
-type ValueHint = string
-
-export type FormatArgs = [Flags, Flags, ValueHint, ArgDataType, Description, DefaultValue?]
 export type DefaultValue<T = string> = T | boolean | number | Array<string>
-
-export type SubCmd = Flags | [Flags, Description?]
 
 /** show in Output or not */
 export type InOutput = boolean
-export type Arg = [Flags, Description] | [Flags, Description, DefaultValue]
+// export type Arg = [Flags, Description] | [Flags, Description, DefaultValue]
 
-export type Args = Array<Arg>
-export type DefaultArgs = Array<Exclude<SubCmd, Flags>>
+// export type Args = Array<Arg>
+// export type DefaultArgs = Array<Exclude<SubCmd, Flags>>
 
-export interface CommandSettings {
-  /** print help info, default `true`*/
+export interface CLISettings {
+  /** Output orignal info, default `false` */
+  clean: boolean
+  /** Output with colors */
+  colorful: boolean
+  /** Output with type info, default `true`*/
+  removeType: boolean
+  /** print help, default `true`*/
   help: boolean
   /**
    * TODO Custom error messages
@@ -64,7 +122,7 @@ export interface CommandSettings {
    * Callback function that runs whenever a parsed flag has not been defined in options.
    * return `false` to abort the action run.
    */
-  unknownArgsError?: (flag: string, meta: Meta) => any
+  unknownError?: (flag: string, meta: Meta) => any
 }
 
 export interface RenderSettings {
@@ -74,41 +132,23 @@ export interface RenderSettings {
   descPadLeft: number
 }
 
-export interface AllRenderSettings extends Partial<RenderSettings> {
-  /**
-   * tail Extra info
-   *
-   * ```txt
-   *  Learn more about Xxx:    https://xxx
-   * ```
-   */
-  Usage?: string | string[]
-  examples?: string | string[]
-  // usage?: string | string[]
-  tail?: string | string[]
-  header?: string | string[]
-}
-
 export interface Meta {
-  /** command name */
+  /** CLI name */
   name: string
-  /** command version */
-  version?: string
-  type?: 'main' | 'sub'
-  description?: string
+  /** CLI version */
+  args: ArgsResult,
+  version: string
+  /** the command is main command or sub command */
+  type: 'main' | 'sub'
+  // description?: string
   /** defualt command arguments */
-  default?: DefaultArgs
-  hint?: string
+  // default?: DefaultArgs
+  // hint?: string
   alias?: string[]
   /** parent Render */
-  parent?: Command | null
+  parent?: CLI | null
   /** command type */
 }
 
 export type RequiredMeta = Required<Meta>
 export type DefineMeta = Omit<Meta, 'alias' | 'hint' | 'type' | 'parent'>
-
-export interface DefineCommands extends DefineMeta {
-  args?: Args,
-  action: CommandAction
-}

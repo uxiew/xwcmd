@@ -1,16 +1,21 @@
-import { Command } from "../src/command";
+import { CLI } from "../src/CLI";
+import { subCLIStr } from "./demo";
 
 describe('test default command', () => {
-  let cmd: Command
+  let cmd: CLI
   beforeEach(async () => {
     cmd = (await import('./demo')).getCmd()
   })
 
   // ----- set default command or arg --------
   it(`sub command show help when '--help' flag is present`, () => {
-    const subCmd = cmd.sub(['i,in, install <lodash>'], () => {
+    const subCmd = cmd.sub({
+      name: 'install',
+      alias: ['i'],
+    }, () => {
       console.log('install action run');
     })
+      .help(`subcmd install's help!!!`);
     const argv = ['i', '--help'];
     const mockHelp = vi.spyOn(subCmd, 'help')
     cmd.run(argv);
@@ -19,21 +24,14 @@ describe('test default command', () => {
 
   // ----- set default command or arg --------
   it('run main default command when default command set', () => {
-    cmd.sub(['i,in, install <lodash>'], () => {
-      console.log('install action run');
-    })
 
-    cmd.sub(['a,ax, axxxx <sss>'], () => {
-      console.log('axxxx');
-    })
     cmd.default(
       ['...x'],
       ['pkg!'],
       ['...files']
     )
-    // cmd.default('[pkg!|array]]')
 
-    cmd.defineAction((a, b) => {
+    cmd.action((a, b) => {
       expect(a).toEqual({
         '--': [],
         _: [],
@@ -76,12 +74,7 @@ describe('test default command', () => {
   });
 
   it('[2] sub default command should work correctly', () => {
-    cmd.sub(
-      ['i,in, install', 'install"s description'],
-      [
-        ['!flag!', 'recursive desc', false],
-        ['r,!recursive', 'recursive desc', false],
-      ],
+    cmd.sub('', subCLIStr,
       (a, b) => {
         // a : args , b: [pkg, files]
         console.log(`xxxxx`, a, b);
@@ -96,43 +89,43 @@ describe('test default command', () => {
         //   pkg: 'axios',
         //   files: ['f1', 'f2']
         // })
-      }).default(
-        ['pkg!', 'pkg desc'],
-        ['...files', 'files desc'],
-      )
+      })
+    // .default(
+    //     ['pkg!', 'pkg desc'],
+    //     ['...files', 'files desc'],
+    //   )
 
     cmd.argv = ['i', 'axios', 'f1', 'f2', '-r', '--flag', 'true', '-n', 'xxx'];
     cmd.run();
   });
 
   it('[3] sub default command should work correctly', async () => {
-    cmd
-      .sub(
-        ['i,in, install', 'install"s description'],
-        [
-          ['flag!', 'recursive desc', 'x'],
-          ['r,!recursive', 'recursive desc', false],
-        ],
-        (a, b) => {
-          expect(a).toEqual({
-            '--': [],
-            _: ['f2', 'xxx'],
-            recursive: true,
-            flag: 'test',
-            n: true
-          })
-          expect(b).toEqual({
-            pkg: 'axios',
-            yu: 'x',
-            file: 'f1'
-          })
-          return a
+    cmd.sub(
+      ['i,in, install', 'install"s description'],
+      [
+        ['flag!', 'recursive desc', 'x'],
+        ['r,!recursive', 'recursive desc', false],
+      ],
+      (a, b) => {
+        expect(a).toEqual({
+          '--': [],
+          _: ['f2', 'xxx'],
+          recursive: true,
+          flag: 'test',
+          n: true
         })
-      .default(
-        ['pkg!'],
-        ['yu'],
-        ['file']
-      )
+        expect(b).toEqual({
+          pkg: 'axios',
+          yu: 'x',
+          file: 'f1'
+        })
+        return a
+      })
+    // .default(
+    //   ['pkg!'],
+    //   ['yu'],
+    //   ['file']
+    // )
 
     const argv = ['i', 'axios', 'x', 'f1', 'f2', '-r', '--flag', "test", '-n', 'xxx'];
     const a = await cmd.run(argv);
@@ -160,9 +153,10 @@ describe('test default command', () => {
           pkg: 'axios',
           files: 'f1'
         })
-      }).default(
-        ['pkg!'], ['files']
-      )
+      })
+    // .default(
+    //     ['pkg!'], ['files']
+    //   )
 
     // cmd.argv = ['node', 'app', 'in', '-r', 'axios', 'f1', 'f2', '--flag', "test", '-n', 'xxx'];
     cmd.run(['install', '-r', 'axios', 'f1', 'f2', '--flag', "test", '-n', 'xxx']);

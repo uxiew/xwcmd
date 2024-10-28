@@ -1,10 +1,11 @@
 import type { MockInstance } from 'vitest';
 import { resolveSubCmd, type Meta } from '../src';
 import { colors } from '../src/colors/picocolors';
-import { Command } from '../src/command';
+import { CLI } from '../src/CLI';
+import { subCLIStr } from './demo';
 
 describe('Command', () => {
-  let cmd: Command, mockError: MockInstance
+  let cmd: CLI, mockError: MockInstance
   const getErrorInfo = (meta: Meta, message: string) => colors.red(meta.name + `: ${message} For help, run command with '--help'.`)
 
   afterEach(() => {
@@ -17,8 +18,8 @@ describe('Command', () => {
   });
 
   it('test subcommand created correctly', () => {
-    const subCmd = cmd.sub(['i,in, install <lodash>', 'desc'], () => {
-      console.log('install action run');
+    const subCmd = cmd.sub('', subCLIStr, () => {
+      console.log('sub install action run');
     })
     expect(subCmd.meta).toEqual({
       type: 'sub',
@@ -36,7 +37,7 @@ describe('Command', () => {
     // const invalidFlag2 = '--invalid';
     cmd.argv = ['node', 'app', invalidFlag];
     // must defineAction
-    cmd.defineAction(() => {
+    cmd.action(() => {
 
     }).on();
 

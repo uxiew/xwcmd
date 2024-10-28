@@ -1,13 +1,6 @@
-import stripAnsi from "strip-ansi";
-import { parse } from "./args/parser";
-import { type Command } from "./command";
-import { XWCMDError } from "./error";
-import type {
-  Arg, Args, ProcessArgv,
-  CmdOptions, DefaultArgs, DefineCommands,
-  FormatArgs, Meta,
-  Resolvable,
-} from "./types";
+import { CLI } from "./CLI";
+import type { CLIItemDef, CLIParamDef, Meta, ParsedResult, Resolvable } from "./types";
+import type { Arrayable, Mapped } from "./argv/types";
 
 export const FLAG_STR = '--'
 export const DEFAULT_STR = '__'
@@ -15,8 +8,18 @@ export const DEFAULT_STR = '__'
 /** Regex to replace quotemark. */
 export const QUOTES_REGEX = /(^"|"$)/g;
 
+/** argv parser options's data type*/
+export const argvTypes = ['string', 'boolean', 'array', 'number']
+
+function clean(out: string) {
+  return out
+    // remove start and end blank lines
+    .replace(/^\n*|\s*$/g, '')
+    // remove end SIGN
+    .replace(/\n\s*;;/g, '')
+}
 // Prints to stdout with newline.
-export const print = console.log
+export const print = (out: string) => console.log(clean(out))
 
 export function simpleEqual(a: string[], o: string[]) {
   return a.every((k, i) => o.indexOf(k) === i)
@@ -50,6 +53,31 @@ export function isLongFlag(str: string): boolean {
 }
 
 /**
+ * Looks for options from given alias. `-x` --> `--xxx`.
+ * @param {string} val `-x` Alias to look for.
+ * @param {Mapped<Arrayable<string>>} alias Aliases.
+ * @returns {string | undefined} `--xxx`
+ * @private
+ */
+export function getAlias(val: string, alias: Mapped<Arrayable<string>>): string | undefined {
+  if (!isShortFlag(val)) return;
+
+  val = val.slice(1); // remove first hyphen
+
+  const a = Object.entries(alias).some(([flag, vals]) => {
+    const yes = Array.isArray(vals) ? vals.includes(val) :
+      typeof (vals) === 'string' ? vals === val : false
+    if (yes) { val = '--' + flag; return true }
+  })
+
+  if (a) return val
+  // for (const [key, aval] of aliases) {
+  //   if (Array.isArray(aval) && aval.includes(val)) return '--' + key;
+  //   if (typeof (aval) === 'string' && aval === val) return '--' + key;
+  // }
+}
+
+/**
  * Convert string to kebab-case.
  * @param {string} str String to convert.
  * @returns {string}
@@ -66,12 +94,17 @@ export function stripFlag(str: string): string {
 }
 
 /**
- * Convert string to camel-case. `sss-aa` -> `sssAa`
+ * Convert string to camel-case. `N`->`N`, `sss-aa` -> `sssAa`
  * @param {string} str String to convert.
  * @returns {string}
  */
 export function toCamelCase(str: string): string {
-  return str.replace(/-/g, ' ').replace(/^\w|[A-Z]|\b\w|\s+/g, (ltr, idx) => idx === 0 ? ltr.toLowerCase() : ltr.toUpperCase()).replace(/\s+/g, '');
+  // If the string does not contain '-', the original string is returned
+  if (!str.includes('-')) return str;
+  return str
+    .toLowerCase()
+    // Capitalize the letter after each '-'
+    .replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
 }
 
 /**
@@ -90,197 +123,57 @@ export function isNumericLike(value: any): boolean {
 
 export const toArray = <T extends any>(val: T | T[]) => Array.isArray(val) ? val : [val]
 
-/**
- * remove extra Angle brackets
- * @example
- * ```js
- *   ' <axx|c> ' -> 'axx|c'
- * ```
- */
-export const parseByChar = (val: string, symbols = ['<', '>']) => val.match(new RegExp(`\\${symbols[0]}([^]*)\\${symbols[1]}`))?.[1] ?? ''
+
 
 /**
- * Parse command-line arguments.
- * @example
- *
- * ```js
- *   [pkg!, re!|boolean, files|array]
- *    ->
- *   {
- *     string: ['pkg'],
- *     boolean: ['re'],
- *     array: [files],
- *     required:['pkg', 're'],
- *     _:[],
- *   }
- * ```
+ * Parse value
+ * @param {string} val Value to convert.
  */
-export const parseDefaultArgs = (defaultArgs: DefaultArgs) => {
-  const result = parseCliArgs(defaultArgs) as CmdOptions & { _: string[] }
-  result._ = defaultArgs.map((p) => cleanArg(p[0]))
-  return result
-}
-
-/**
- * remove `<xxx>`、`| xxx`,`! xxx !` and trim space,
- * get clean flag value
- */
-export const cleanArg = (val: string) => {
-  let trimmed = val
-    .replace(/<.*>/, '')
-    .replace(/(\[.*\])/g, (a) => a.replace(/\|/g, '&'))
-    // remove things like `| array`
-    .replace(/\|.+$/, '')
-    .replace('&', '|')
-    .trim()
-    // Remove leading signs `!`, `...` and `-`
-    .replace(/^(!|-|\.\.\.)/, '')
-    // remove the ending required sign `!`
-    .replace(/!$/, '')
-
-  return trimmed
-}
-
-/**
- * @return {Array} all flags alias include flag itself.
- * @example
- *
- * ```js
- *  [i, install [+aa!] <hintxxx> | asd]
- * ->
- *  ['i', 'install <hintxxx> | asd']
- * ```
- */
-export const splitFlag = (val: string) => {
-  return val.replace(/\[(.+)\]/, '')
-    .split(/,(?![^<]*>)/)
-    .map((f) => f.trim())
-}
-
-type OptionalType = 'string' | 'boolean' | 'number' | 'array'
-
-/**
- * parse flag and it's type from string like `-parse!`,
- * @param {String} val like `!bool! <hint>`, `!bool!`
- */
-export function parseType(val: string): [OptionalType, string, boolean] {
-  let type: OptionalType = 'string', required = false
-  switch (val.replace(/<.*>/, '').charAt(0)) {
-    case '-':
-      type = 'number'
-      break;
-    case '!':
-      type = 'boolean'
-      break;
-    case '.':
-      type = 'array'
-      break;
+export const parseValue = (val: unknown) => {
+  if (typeof val !== 'string') return val
+  if (/^\[.*\]$/.test(val)) {
+    try {
+      // use JSON parse array like string，remove quot
+      const arrayValue = JSON.parse(val.replace(/'/g, '"'));
+      return Array.isArray(arrayValue) ? arrayValue : val;
+    } catch (e) {
+      return val;
+    }
   }
-  if (/.+!/.test(val)) required = true
-  return [type, cleanArg(val), required]
+
+  if (val === "true" || val === "false") {
+    return val === "true";
+  }
+  if (isNumericLike(val)) {
+    return Number.parseFloat(val);
+  }
+
+  if (typeof val === 'string') return val.replace(QUOTES_REGEX, '');
+
+  return val;
 }
 
 /**
- * transform args to ofi params
- */
-function argsHandle(args: Arg, options: CmdOptions) {
-  const [flags, description, defaultValue] = args
-  const flagArr = splitFlag(flags)
-  const alias: string[] = []
-  flagArr.forEach((f, i) => {
-    const draftFlag = stripAnsi(f)
-    let [type, val, required] = parseType(draftFlag);
-    if (i === flagArr.length - 1) {
-      if (required) options.required.push(val)
-      options[type] ? options[type].push(val) : (options[type] = [val]);
-      (options.alias || (options.alias = {}))[val] = alias
-      if (typeof defaultValue !== 'undefined') {
-        (options.default || (options.default = {}))[val] = defaultValue
-      }
-      options.description[val] = description ?? ''
-      options.hints[val] = parseByChar(draftFlag)
-    } else {
-      alias.push(val)
-    }
-  })
+* format the output help
+* @param options -  default: `{ clean: true, removeType: true}`
+*/
+export function format(output: string, options = CLI.settings) {
+  if (options.clean) output = clean(output)
+  if (options.removeType) {
+    argvTypes.forEach((type) => {
+      output = output.replace(new RegExp(type + '\s*$', 'g'), '')
+    })
+  }
+  if (options.colorful) {
+    // TODO colors
+  }
+
+  return output
 }
 
-/**
- * parse define params args to Parser's args ，return like this:
- * @example
- * ```js
- * {
- *   description: {},
- *   hints: {}，
- *   alias: { foo: ['f'] },
- *   default: { surname: 'obama', list: [] }
- *   number: ['size'],
- *   string: ['foo', 'name', 'surname'],
- *   boolean: ['dice', 'friendly'],
- *   array: ['list', 'my-numbers'],
- *   required: ['list', 'my-numbers'],
- * }
- * ```
- */
-export function parseCliArgs(args: Args | DefaultArgs) {
-  const options: CmdOptions = {
-    alias: {},
-    description: {},
-    hints: {},
-    required: []
-  };
-  if (args.length === 0) return options
-  args.forEach((arg) => {
-    const [flags, description] = arg
-    argsHandle(arg as Arg, options)
-  })
-  return options
-}
-
-/**
- *  split alias and flag, and hint value,default value
- * @example
- *
- * ```js
- * [
- *     [`m,me, ${colors.blue('!mean')}! <hint>`, 'Is a description', 'default value],
- * ]
- * ->
- * [
- *     [`m,me`, `${colors.blue('mean')}`, `hint`, `array`, 'Is a description', 'default value`],
- * ]
- * ```
- */
-export function formatArgs(args: Args) {
-  return args.map((arg) => {
-    const flags = arg.shift();
-    if (typeof flags !== 'string') {
-      throw new XWCMDError('The args definition error.');
-    }
-    const alias = splitFlag(flags)
-    const flag = alias.pop()
-    if (flag === undefined) {
-      throw new XWCMDError('The args missing flag!');
-    }
-    const [type, val] = parseType(stripAnsi(flag))
-    return [alias.join(','), val, parseByChar(flag), type, ...arg]
-  }) as FormatArgs[]
-}
-
-/**
- * method for render Output, fill space like indent
- */
-export function fillSpace(n: number) { return ' '.repeat(n) }
-
-export function matchSubCmd(meta: Meta, currentCmd: string) {
-  return meta.alias!.concat(meta.name).some((n: string) => stripAnsi(n) === currentCmd)
-}
-
-/**
- * remove color ANSI chars,get real length for layout
- */
-export function stringLen(str: string) {
-  return stripAnsi(str).length
+/** ======================================= */
+export function matchSubCmd(meta: Meta, cmdName: string) {
+  return meta.alias!.concat(meta.name).some((n: string) => n === cmdName)
 }
 
 /**
@@ -291,14 +184,42 @@ export function isLink(text: string) {
 }
 
 /**
- * make ANSI string concat with insertString
- */
-export function concatANSI(str: string, insertStr: string) {
-  const newANSIStr = str.replace(
-    /\x1B\[[0-9;]*[mGK](.*?)\x1B\[[0-9;]*[mGK]/g,
-    (m, p) => (m ? m.replace(p, insertStr + p) : m)
-  )
-  return newANSIStr === str ? insertStr + str : newANSIStr
+* resolve cli's args
+*/
+export function parseCLIArgs(argsDef: CLIParamDef): ParsedResult {
+  const result: ParsedResult = {
+    // Overwrite `version` when setting a subcommand
+    meta: { type: 'sub', version: '', name: argsDef.name, alias: argsDef.alias },
+    cmds: [],
+    args: {
+      _: [],
+      default: {},
+    },
+    opts: {
+      alias: {},
+      default: {},
+    }
+  }
+
+  const { opts } = result
+  const fill = (data: CLIItemDef | undefined) => {
+    data && Object.entries(data).forEach(
+      ([name, { type, alias, choices, default: d, required }]) => {
+        type = type || 'string';
+        (opts[type] || (opts[type] = [])).push(name)
+        alias && (opts.alias![name] = alias)
+        d && (opts.default![name] = d)
+        if (choices) {
+          (opts.choices || (opts.choices = {}))[name] = choices
+        }
+        if (required) {
+          (opts.required || (opts.required = [])).push(name)
+        }
+      })
+  }
+  fill(argsDef.arguments)
+  fill(argsDef.options)
+  return result
 }
 
 export function resolveValue<T>(input: Resolvable<T>): T | Promise<T> {
@@ -306,20 +227,11 @@ export function resolveValue<T>(input: Resolvable<T>): T | Promise<T> {
 }
 
 /**
- * Parses input arguments and applies defaults.
- * @param {ProcessArgv} argv - the process argv
- * @param {Exclude<DefineCommands['args'], undefined>} args - args,like `['a,arg <hint>','desc','default_value]`
- */
-export function parseArgs(argv: ProcessArgv, args: Exclude<DefineCommands['args'], undefined>) {
-  return parse(argv.slice(2), parseCliArgs(args))
-}
-
-/**
  * get main command instance
  * @param { Command } cmd - current command
  */
-export function resolveMainCmd(cmd: Command) {
-  if (cmd.type === 'main') return cmd
+export function resolveMainCmd(cmd: CLI) {
+  if (cmd.meta.type === 'main') return cmd
   return resolveMainCmd(cmd.meta.parent!)
 }
 
@@ -328,14 +240,14 @@ export function resolveMainCmd(cmd: Command) {
  * @param { String } name - sub command' name
  * @param { Command } cmd - current command
  */
-export function resolveSubCmd(cmd: Command, name: string) {
-  const cmdInfo: { cmd: Command | null, argv: string[] } = {
+export function resolveSubCmd(cmd: CLI, name: string) {
+  const cmdInfo: { cmd: CLI | null, argv: string[] } = {
     cmd: null,
     argv: [],
   }
-  if (cmd.type !== "main") cmd = resolveMainCmd(cmd)
+  if (cmd.meta.type !== "main") cmd = resolveMainCmd(cmd)
 
-  const resolve = (cmd: Command) => {
+  const resolve = (cmd: CLI) => {
     for (const c of cmd.subs) {
       cmdInfo.argv.push(c.meta.name)
       if (matchSubCmd(c.meta, name)) {

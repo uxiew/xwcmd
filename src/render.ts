@@ -1,19 +1,15 @@
-import { row, type ColumnOptions } from "minicolumns";
-import stripAnsi from "strip-ansi";
 import { colors } from "./colors/picocolors";
 import {
-  cleanArg,
-  concatANSI, fillSpace, parseType, print,
+  print,
   stringLen, stripFlag, toArray
 } from "./utils";
 import type {
   RenderSettings,
-  Output, FormatArgs,
+  Output,
   SettingGroup,
   RequiredMeta,
   DefaultArgs,
   ExtraGroup,
-  AllRenderSettings
 } from "./types";
 
 export class Render {
@@ -102,7 +98,7 @@ export class Render {
    * add Flags or Commands to output
    */
   addExtra({ type, info }: { type: ExtraGroup, info: FormatArgs[] }) {
-    let maxAliasLen = 0, padLeft = fillSpace(this.settings.indentLevel);
+    let maxAliasLen = 0, padLeft = (this.settings.indentLevel);
     this.extras[type] = info.map(([alias, flag, hint, _, desc, defaultValue]) => {
       const aliasFlag = alias ? alias.split(',').map(a => concatANSI(a, '-')).join(', ') : ''
       const defaultV = typeof defaultValue === 'undefined' ? '' : colors.dim(` (default: ${JSON.stringify(defaultValue)})`)
@@ -118,7 +114,7 @@ export class Render {
 
     this.extras[type].forEach((flag) => {
       flag[0] = flag[0].padStart(maxAliasLen + flag[0].length - stringLen(flag[0]))
-      flag.unshift(padLeft + fillSpace(2))
+      flag.unshift(padLeft + '')
     })
     // console.log(`addExtra-- - `, this.extras)
   }
@@ -182,7 +178,7 @@ export class Render {
    */
   display() {
     type FormatOptions = Parameters<typeof row>[1]
-    const padLeft = fillSpace(this.settings.indentLevel)
+    const padLeft = ''
     const newLine = '\n'
 
     //  Commands and Flags Formater and Style
@@ -241,7 +237,7 @@ export class Render {
 
       //  Commands info
       print(row(this.extras.Commands, FlagStyle));
-      print(newLine + padLeft + fillSpace(2) +
+      print(newLine + padLeft + '' +
         `For more info, run any command with the ${colors.gray(colors.italic('--help'))} flag.`)
     }
 

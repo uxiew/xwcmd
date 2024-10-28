@@ -1,11 +1,22 @@
-<img style="width:100vw;height:200px" src="https://cdn.jsdelivr.net/gh/uxiew/xwcmd@main/xwcmd.svg"/>
+<p align="center">
+<a href="https://github.com/uxiew/xwcmd" target="_blank">
+<img src="https://cdn.jsdelivr.net/gh/uxiew/xwcmd@main/xwcmd.svg" alt="Slidev" height="250" width="250"/>
+</a>
+</p>
+
+<p align="center">
+Prioritize the output display of the CLI, then everything becomes easier.🐈
+</p>
 
 # xwcmd
 
-Opinionated, Simple and Efficient CLI Builder. But more flexible style, happy to Use.
+Opinionated, Simple and Efficient CLI Builder. happy to Use.
 
-- Customize some style styles and outputs
-- Just a few simple character definitions
+- Use output help info to define CLI, more customizable.
+(**Note: Provide your own output help information**)
+- Chaining Method Call.
+- Easy subcommand-based CLIs: `app server`, `app fetch`, etc.
+- Fully POSIX-compliant flags (including short & long versions)
 - Support multi-level subcommands, theoretically can be unlimited subcommand nesting
 
 ## Usage
@@ -13,96 +24,83 @@ Opinionated, Simple and Efficient CLI Builder. But more flexible style, happy to
 Install:
 
 ```sh
-npm install --save xwcmd
+npm install --save xwcmd   # need >0.1.2
 ```
 
-usage see [test/cli.js](./test/cli.js)
+Use example:
+```ts
+import { cli } from 'xwcmd'
+
+let input = `
+  This is a mycli description. (version: 1.1.22)
+
+  Usage: mycli <...arguments> <command> [...flags]
+
+  Arguments:
+    in        in's description <number>
+    pkg       pks's description [array]
+
+  Commands:
+    install       lodash, axios, react
+    uninstall     uninstall's description
+
+    For more info, run any command with the --help flag.
+
+  Flags:
+    -t, --target  <delay>                  You kan see it is a description (default: "astronaut") <string>
+    -m, --mean   [xxxxa]                   Is a description
+    -l, --list1                            Thisis a desc for list1  [string]
+        --array1                           array1's description,so test a long description, LOL, no other meaning (default: [])   [string]
+    -b, --boolean1                         Boolean s desc (default: false)  [boolean]
+        --number1                          I am number1's desc (default: 0)   [number]
+        --nom-test                         test a long d阿萨斯escription, LOL, no other meaning <boolean>
+
+  Examples:
+    Add a xx from the npm registry
+    bun add zod
+    bun add zod@next
+    bun add zod@3.0.0
+`;
+
+cli(input, ()=>{
+  console.log('action running!')
+})
+
+cli.on()
+```
+
+more usages see [test/cli.ts](./test/cli.ts)
 
 ## API
 
-### `define(options)`
+Your CLI project can be changed based on the above template.
 
-Create the main Command. the `options` is a object, reference above example.
+### `cli(input:string, action: Function)`
+
+Create the main Command. reference above example.
 
 ### `setConfig(options)`
 
 Set the global configuration of all commands.
 
-#### `options.args`
+## Command's Methods
 
-Let me explain, for examples:
-
-```ts
-import { colors } from 'xwcmd'
-...
- [`f,${colors.blue('...files')} <value_hint>`, 'This is a description for files flag' , []]
-```
-
-The first parameter is a flag and it's aliases (this example is `-f`,`---files`), the second is this flag's description, and the third is the default value (this example is `[]`).
-
-`colors.blue()` function from [alexeyraspopov/picocolors](https://gitub.com/alexeyraspopov/picocolors), so you can use multicolor in your cli. Like highlighting some hints, or arg
-
-`<value_hint>` is a hint for the value, define by `<>` parentheses. like description for the value.
-
-The `...` is a separator for the data type, `...` means the value is an array.
-The type of arg is defined by prefacing it with a specific character，such as `-`,'!','...', default: `string`.
-`-` means `number` type.
-`!` means `boolean` type.
-`...` means `array` type.
-
-The type is automatically converted for you, you can also specify the default value.
-
-#### `options.action`
-
-The action function is called when the command is executed.
-
-#### `options.name`
-
-The name of the command.
-
-#### `options.version`
-
-The version of the command.
-
-## Command's Method
-
-### `sub(subCommandMeta, args, action)`
+### `sub(input: string, action:(a, b)=>{})`
 Add a sub-command.
 
 ```ts
 cmd.sub(
-  ['i,in, install [pkg] <lodash, axios, react>'],
-  [
-    [`${colors.bgYellow('in')} | number`, `in's description`, 19],
-    ['in2', `in2's description`, `in2's defaultValue`]
-  ],
+  input: string,
   (args, { pkg }) => {
     console.log(`install+++`, args, pkg);
   }
 );
 ```
 
-The first parameter `subCommandMeta` is an array of strings that describe the sub-command. like a item defined in `args`
+like `cli` method
 
-The second parameter `args` is an array of flags and their options. it's the same as the `args` parameter in the `define` method.
 
-The third parameter `action` is a function that is called when the sub-command is executed.
-
-`subCommandMeta`
-
-### `set(options: Settings)`
-
-Set this command configuration options.
-
-### `default(args: DefaultArgs)`
-
-Default command parameters.
-
-```ts
-cmd.default(['...pkg!']);
-```
-
-### `call(name:string, argv: any[])`
+### `call(cmdName:string, argv: any[])`
 
 Invoke any registered subcommand.
 
@@ -110,28 +108,22 @@ Invoke any registered subcommand.
  cmd.call('any_subcommand', ['default_arg_value', '--flag', 'flag_value'])
 ```
 
-### `examples()`
+### `version(ver?:string)`
 
-Display examples information
+set the version info or display it.
 
-### `getMeta()`
-get command's meta information
+### `help(output?:string)`
 
-### `help()`
+set the help info or display it.
 
-Display help information
-
-### `run()`
-Finally we need to call it
+### `on()`
+Finally we have to call it.
 
 ## TODO
 
 - [x] more test
-- [x] value hint.
 - [x] globalSet?
 - [ ] env?
-- [ ] choices.
-- [ ] remove row layout?.
 
 ## any problem?
 
